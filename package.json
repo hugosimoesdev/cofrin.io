@@ -1,0 +1,18 @@
+{
+  "name": "cofrin-io",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd apps/backend && ./mvnw quarkus:dev",
+    "dev:frontend": "npm run dev --workspace apps/frontend",
+    "build": "npm run build --workspace apps/frontend && cd apps/backend && ./mvnw package",
+    "test": "npm run test --workspace apps/frontend && cd apps/backend && ./mvnw test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

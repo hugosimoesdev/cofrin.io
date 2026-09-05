@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Frontend
+apps/frontend/dist/
+apps/frontend/.vite/
+
+# Backend
+apps/backend/target/
+apps/backend/.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+
+# Environment
+.env
+.env.*
+!.env.example
