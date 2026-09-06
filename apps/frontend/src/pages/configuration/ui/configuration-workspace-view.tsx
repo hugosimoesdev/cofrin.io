@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 
+import { useI18n, type TranslationKey } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 import {
   Table,
@@ -17,7 +18,24 @@ type ConfigurationWorkspaceViewProps = {
   workspace: ConfigurationWorkspace;
 };
 
+const accountTypeLabelKeys: Record<string, TranslationKey> = {
+  cash: 'accountType.cash',
+  checking: 'accountType.checking',
+  savings: 'accountType.savings',
+  credit: 'accountType.credit',
+};
+
+const categoryTypeLabelKeys: Record<string, TranslationKey> = {
+  expense: 'categoryType.expense',
+  income: 'categoryType.income',
+};
+
+const fieldClassName =
+  'h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40';
+
 export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspaceViewProps) {
+  const { t } = useI18n();
+
   function submitAccountForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     workspace.submitAccountForm();
@@ -33,58 +51,61 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
       <section className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-6 py-8 max-[720px]:px-4">
         <header>
           <h1 className="text-4xl font-semibold tracking-normal max-[560px]:text-3xl">
-            Configuration
+            {t('configuration.title')}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#66736f]">
-            Manage transaction accounts and categories.
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {t('configuration.description')}
           </p>
         </header>
 
         {workspace.isLoading && (
-          <div className="flex min-h-44 items-center justify-center rounded-lg border border-[#172026]/10 bg-white text-[#66736f]">
+          <div className="flex min-h-44 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
             <Loader2 className="mr-2 animate-spin" />
-            Loading configuration
+            {t('configuration.loading')}
           </div>
         )}
 
         {workspace.loadErrorMessage && (
-          <div className="rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-destructive">
             {workspace.loadErrorMessage}
           </div>
         )}
 
         {!workspace.isLoading && !workspace.loadErrorMessage && (
           <div className="grid gap-6 xl:grid-cols-2">
-            <section className="rounded-lg border border-[#172026]/10 bg-white shadow-[0_18px_42px_rgba(23,32,38,0.08)]">
-              <div className="border-b border-[#172026]/10 px-4 py-4">
-                <h2 className="text-xl font-semibold">Accounts</h2>
+            <section className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+              <div className="border-b border-border px-4 py-4">
+                <h2 className="text-xl font-semibold">{t('configuration.accounts.title')}</h2>
               </div>
-              <form onSubmit={submitAccountForm} className="grid gap-3 border-b border-[#172026]/10 px-4 py-4">
+              <form
+                onSubmit={submitAccountForm}
+                className="grid gap-3 border-b border-border px-4 py-4"
+              >
                 <div className="grid gap-3 sm:grid-cols-[1fr_130px_130px]">
-                  <label className="grid gap-1 text-sm font-medium text-[#34413d]">
-                    Name
+                  <label className="grid gap-1 text-sm font-medium text-foreground">
+                    {t('configuration.form.name')}
                     <input
                       type="text"
                       value={workspace.accountForm.name}
                       onChange={(event) => workspace.updateAccountForm('name', event.target.value)}
-                      className="h-9 rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className={fieldClassName}
                     />
                   </label>
-                  <label className="grid gap-1 text-sm font-medium text-[#34413d]">
-                    Type
+                  <label className="grid gap-1 text-sm font-medium text-foreground">
+                    {t('configuration.form.type')}
                     <select
                       value={workspace.accountForm.type}
                       onChange={(event) => workspace.updateAccountForm('type', event.target.value)}
-                      className="h-9 rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className={fieldClassName}
                     >
-                      <option value="cash">Cash</option>
-                      <option value="checking">Checking</option>
-                      <option value="savings">Savings</option>
-                      <option value="credit">Credit</option>
+                      <option value="cash">{t('accountType.cash')}</option>
+                      <option value="checking">{t('accountType.checking')}</option>
+                      <option value="savings">{t('accountType.savings')}</option>
+                      <option value="credit">{t('accountType.credit')}</option>
                     </select>
                   </label>
-                  <label className="grid gap-1 text-sm font-medium text-[#34413d]">
-                    Balance
+                  <label className="grid gap-1 text-sm font-medium text-foreground">
+                    {t('configuration.form.balance')}
                     <input
                       type="number"
                       step="0.01"
@@ -92,12 +113,12 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                       onChange={(event) =>
                         workspace.updateAccountForm('initialBalance', event.target.value)
                       }
-                      className="h-9 rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className={fieldClassName}
                     />
                   </label>
                 </div>
                 {workspace.accountFormError && (
-                  <p className="text-sm text-red-700">{workspace.accountFormError}</p>
+                  <p className="text-sm text-destructive">{workspace.accountFormError}</p>
                 )}
                 <div className="flex justify-end gap-2">
                   {workspace.editingAccountId && (
@@ -108,32 +129,38 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                       disabled={workspace.hasPendingMutation}
                     >
                       <X />
-                      Cancel
+                      {t('configuration.form.cancel')}
                     </Button>
                   )}
                   <Button type="submit" disabled={workspace.hasPendingMutation}>
                     {workspace.isSavingAccount ? <Loader2 className="animate-spin" /> : <Plus />}
-                    {workspace.editingAccountId ? 'Save account' : 'Create account'}
+                    {workspace.editingAccountId
+                      ? t('configuration.accounts.save')
+                      : t('configuration.accounts.create')}
                   </Button>
                 </div>
               </form>
               {workspace.accountDeleteError && (
-                <p className="px-4 pt-4 text-sm text-red-700">{workspace.accountDeleteError}</p>
+                <p className="px-4 pt-4 text-sm text-destructive">
+                  {workspace.accountDeleteError}
+                </p>
               )}
               <Table>
-                <TableHeader className="bg-[#eef3ec]">
+                <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead className="w-40 text-right">Actions</TableHead>
+                    <TableHead>{t('configuration.form.name')}</TableHead>
+                    <TableHead>{t('configuration.form.type')}</TableHead>
+                    <TableHead>{t('configuration.form.balance')}</TableHead>
+                    <TableHead className="w-40 text-right">
+                      {t('transactions.columns.actions')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {workspace.accounts.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-[#66736f]">
-                        No accounts yet.
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                        {t('configuration.accounts.empty')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -144,7 +171,11 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                     return (
                       <TableRow key={account.id}>
                         <TableCell>{account.name}</TableCell>
-                        <TableCell>{account.type}</TableCell>
+                        <TableCell>
+                          {accountTypeLabelKeys[account.type]
+                            ? t(accountTypeLabelKeys[account.type])
+                            : account.type}
+                        </TableCell>
                         <TableCell>{account.initialBalance}</TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">
@@ -156,7 +187,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="secondary"
                                   onClick={workspace.cancelAccountDelete}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Cancel account delete"
+                                  aria-label={t('configuration.accounts.cancelDelete')}
                                 >
                                   <X />
                                 </Button>
@@ -166,8 +197,8 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="destructive"
                                   onClick={() => workspace.confirmAccountDelete(account.id)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Confirm account delete"
-                                  title="Deleting an account also deletes related transactions."
+                                  aria-label={t('configuration.accounts.confirmDelete')}
+                                  title={t('configuration.accounts.deleteWarning')}
                                 >
                                   {isDeleting ? <Loader2 className="animate-spin" /> : <Check />}
                                 </Button>
@@ -180,7 +211,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="secondary"
                                   onClick={() => workspace.startAccountEdit(account)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Edit account"
+                                  aria-label={t('configuration.accounts.edit')}
                                 >
                                   <Pencil />
                                 </Button>
@@ -190,7 +221,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="destructive"
                                   onClick={() => workspace.requestAccountDelete(account.id)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Delete account"
+                                  aria-label={t('configuration.accounts.delete')}
                                 >
                                   <Trash2 />
                                 </Button>
@@ -205,39 +236,42 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
               </Table>
             </section>
 
-            <section className="rounded-lg border border-[#172026]/10 bg-white shadow-[0_18px_42px_rgba(23,32,38,0.08)]">
-              <div className="border-b border-[#172026]/10 px-4 py-4">
-                <h2 className="text-xl font-semibold">Categories</h2>
+            <section className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+              <div className="border-b border-border px-4 py-4">
+                <h2 className="text-xl font-semibold">{t('configuration.categories.title')}</h2>
               </div>
-              <form onSubmit={submitCategoryForm} className="grid gap-3 border-b border-[#172026]/10 px-4 py-4">
+              <form
+                onSubmit={submitCategoryForm}
+                className="grid gap-3 border-b border-border px-4 py-4"
+              >
                 <div className="grid gap-3 sm:grid-cols-[1fr_150px]">
-                  <label className="grid gap-1 text-sm font-medium text-[#34413d]">
-                    Name
+                  <label className="grid gap-1 text-sm font-medium text-foreground">
+                    {t('configuration.form.name')}
                     <input
                       type="text"
                       value={workspace.categoryForm.name}
                       onChange={(event) =>
                         workspace.updateCategoryForm('name', event.target.value)
                       }
-                      className="h-9 rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className={fieldClassName}
                     />
                   </label>
-                  <label className="grid gap-1 text-sm font-medium text-[#34413d]">
-                    Type
+                  <label className="grid gap-1 text-sm font-medium text-foreground">
+                    {t('configuration.form.type')}
                     <select
                       value={workspace.categoryForm.type}
                       onChange={(event) =>
                         workspace.updateCategoryForm('type', event.target.value)
                       }
-                      className="h-9 rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className={fieldClassName}
                     >
-                      <option value="expense">Expense</option>
-                      <option value="income">Income</option>
+                      <option value="expense">{t('categoryType.expense')}</option>
+                      <option value="income">{t('categoryType.income')}</option>
                     </select>
                   </label>
                 </div>
                 {workspace.categoryFormError && (
-                  <p className="text-sm text-red-700">{workspace.categoryFormError}</p>
+                  <p className="text-sm text-destructive">{workspace.categoryFormError}</p>
                 )}
                 <div className="flex justify-end gap-2">
                   {workspace.editingCategoryId && (
@@ -248,31 +282,37 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                       disabled={workspace.hasPendingMutation}
                     >
                       <X />
-                      Cancel
+                      {t('configuration.form.cancel')}
                     </Button>
                   )}
                   <Button type="submit" disabled={workspace.hasPendingMutation}>
                     {workspace.isSavingCategory ? <Loader2 className="animate-spin" /> : <Plus />}
-                    {workspace.editingCategoryId ? 'Save category' : 'Create category'}
+                    {workspace.editingCategoryId
+                      ? t('configuration.categories.save')
+                      : t('configuration.categories.create')}
                   </Button>
                 </div>
               </form>
               {workspace.categoryDeleteError && (
-                <p className="px-4 pt-4 text-sm text-red-700">{workspace.categoryDeleteError}</p>
+                <p className="px-4 pt-4 text-sm text-destructive">
+                  {workspace.categoryDeleteError}
+                </p>
               )}
               <Table>
-                <TableHeader className="bg-[#eef3ec]">
+                <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="w-40 text-right">Actions</TableHead>
+                    <TableHead>{t('configuration.form.name')}</TableHead>
+                    <TableHead>{t('configuration.form.type')}</TableHead>
+                    <TableHead className="w-40 text-right">
+                      {t('transactions.columns.actions')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {workspace.categories.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center text-[#66736f]">
-                        No categories yet.
+                      <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                        {t('configuration.categories.empty')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -283,7 +323,11 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                     return (
                       <TableRow key={category.id}>
                         <TableCell>{category.name}</TableCell>
-                        <TableCell>{category.type}</TableCell>
+                        <TableCell>
+                          {categoryTypeLabelKeys[category.type]
+                            ? t(categoryTypeLabelKeys[category.type])
+                            : category.type}
+                        </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">
                             {isConfirmingDelete ? (
@@ -294,7 +338,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="secondary"
                                   onClick={workspace.cancelCategoryDelete}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Cancel category delete"
+                                  aria-label={t('configuration.categories.cancelDelete')}
                                 >
                                   <X />
                                 </Button>
@@ -304,8 +348,8 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="destructive"
                                   onClick={() => workspace.confirmCategoryDelete(category.id)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Confirm category delete"
-                                  title="Deleting a category also deletes related transactions."
+                                  aria-label={t('configuration.categories.confirmDelete')}
+                                  title={t('configuration.categories.deleteWarning')}
                                 >
                                   {isDeleting ? <Loader2 className="animate-spin" /> : <Check />}
                                 </Button>
@@ -318,7 +362,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="secondary"
                                   onClick={() => workspace.startCategoryEdit(category)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Edit category"
+                                  aria-label={t('configuration.categories.edit')}
                                 >
                                   <Pencil />
                                 </Button>
@@ -328,7 +372,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
                                   variant="destructive"
                                   onClick={() => workspace.requestCategoryDelete(category.id)}
                                   disabled={workspace.hasPendingMutation}
-                                  aria-label="Delete category"
+                                  aria-label={t('configuration.categories.delete')}
                                 >
                                   <Trash2 />
                                 </Button>

@@ -2,6 +2,7 @@ import { Check, Loader2, Trash2, X } from 'lucide-react';
 
 import type { Account } from '@/entities/accounts';
 import type { Category } from '@/entities/categories';
+import { useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 import {
   Table,
@@ -45,25 +46,27 @@ export function TransactionsSheet({
   onSaveRow,
   onRemoveRow,
 }: TransactionsSheetProps) {
+  const { t } = useI18n();
+
   return (
-    <div className="overflow-hidden rounded-lg border border-[#172026]/10 bg-white shadow-[0_18px_42px_rgba(23,32,38,0.08)]">
+    <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm">
       <Table>
-        <TableHeader className="bg-[#eef3ec]">
+        <TableHeader className="bg-muted">
           <TableRow>
-            <TableHead className="min-w-36">Date</TableHead>
-            <TableHead className="min-w-56">Description</TableHead>
-            <TableHead className="min-w-36">Amount</TableHead>
-            <TableHead className="min-w-44">Account</TableHead>
-            <TableHead className="min-w-44">Category</TableHead>
-            <TableHead className="min-w-56">Notes</TableHead>
-            <TableHead className="w-32 text-right">Actions</TableHead>
+            <TableHead className="min-w-36">{t('transactions.columns.date')}</TableHead>
+            <TableHead className="min-w-56">{t('transactions.columns.description')}</TableHead>
+            <TableHead className="min-w-36">{t('transactions.columns.amount')}</TableHead>
+            <TableHead className="min-w-44">{t('transactions.columns.account')}</TableHead>
+            <TableHead className="min-w-44">{t('transactions.columns.category')}</TableHead>
+            <TableHead className="min-w-56">{t('transactions.columns.notes')}</TableHead>
+            <TableHead className="w-32 text-right">{t('transactions.columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="h-28 text-center text-[#66736f]">
-                No transactions yet.
+              <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                {t('transactions.empty')}
               </TableCell>
             </TableRow>
           )}
@@ -73,7 +76,7 @@ export function TransactionsSheet({
             const isDeleting = pendingDeleteClientId === row.clientId;
 
             return (
-              <TableRow key={row.clientId} className={row.error ? 'bg-red-50/70' : undefined}>
+              <TableRow key={row.clientId} className={row.error ? 'bg-destructive/10' : undefined}>
                 <TableCell>
                   <input
                     type="date"
@@ -81,7 +84,7 @@ export function TransactionsSheet({
                     onChange={(event) =>
                       onRowChange(row.clientId, 'transactionDate', event.target.value)
                     }
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   />
                 </TableCell>
                 <TableCell>
@@ -91,10 +94,10 @@ export function TransactionsSheet({
                     onChange={(event) =>
                       onRowChange(row.clientId, 'description', event.target.value)
                     }
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   />
                   {row.error && (
-                    <p className="mt-1 max-w-56 whitespace-normal text-xs text-red-700">
+                    <p className="mt-1 max-w-56 whitespace-normal text-xs text-destructive">
                       {row.error}
                     </p>
                   )}
@@ -105,14 +108,14 @@ export function TransactionsSheet({
                     step="0.01"
                     value={row.amount}
                     onChange={(event) => onRowChange(row.clientId, 'amount', event.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   />
                 </TableCell>
                 <TableCell>
                   <select
                     value={row.accountId}
                     onChange={(event) => onRowChange(row.clientId, 'accountId', event.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   >
                     {accounts.map((account) => (
                       <option key={account.id} value={account.id}>
@@ -127,7 +130,7 @@ export function TransactionsSheet({
                     onChange={(event) =>
                       onRowChange(row.clientId, 'categoryId', event.target.value)
                     }
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   >
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
@@ -141,7 +144,7 @@ export function TransactionsSheet({
                     type="text"
                     value={row.notes}
                     onChange={(event) => onRowChange(row.clientId, 'notes', event.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   />
                 </TableCell>
                 <TableCell>
@@ -152,7 +155,7 @@ export function TransactionsSheet({
                       variant="secondary"
                       onClick={() => onSaveRow(row)}
                       disabled={hasPendingMutation || (!row.isDirty && !row.isDraft)}
-                      aria-label="Save transaction"
+                      aria-label={t('transactions.actions.save')}
                     >
                       {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
                     </Button>
@@ -162,7 +165,11 @@ export function TransactionsSheet({
                       variant={row.isDraft ? 'ghost' : 'destructive'}
                       onClick={() => onRemoveRow(row)}
                       disabled={hasPendingMutation}
-                      aria-label={row.isDraft ? 'Remove draft row' : 'Delete transaction'}
+                      aria-label={
+                        row.isDraft
+                          ? t('transactions.actions.removeDraft')
+                          : t('transactions.actions.delete')
+                      }
                     >
                       {isDeleting ? (
                         <Loader2 className="animate-spin" />

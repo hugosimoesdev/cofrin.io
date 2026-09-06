@@ -10,12 +10,14 @@ import {
   updateTransaction,
 } from '@/entities/transactions';
 import { getApiErrorMessage } from '@/shared/api';
+import { useI18n } from '@/shared/lib';
 
 import {
   createDraftTransactionRow,
   getSignedTransactionAmount,
   rowToTransactionRequest,
   transactionToRow,
+  transactionValidationMessageKeys,
   validateTransactionRow,
   type TransactionRow,
 } from './transaction-sheet';
@@ -51,6 +53,7 @@ export type TransactionWorkspace = {
 };
 
 export function useTransactionWorkspace(): TransactionWorkspace {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const transactionsQuery = useQuery(transactionQueries.list());
   const accountsQuery = useQuery(accountQueries.list());
@@ -125,7 +128,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
           currentRow.clientId === row.clientId
             ? {
                 ...currentRow,
-                error: getApiErrorMessage(error, 'Could not save transaction.'),
+                error: getApiErrorMessage(error, t('transactions.saveError')),
               }
             : currentRow,
         ),
@@ -153,7 +156,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
           currentRow.clientId === row.clientId
             ? {
                 ...currentRow,
-                error: getApiErrorMessage(error, 'Could not delete transaction.'),
+                error: getApiErrorMessage(error, t('transactions.deleteError')),
               }
             : currentRow,
         ),
@@ -196,7 +199,14 @@ export function useTransactionWorkspace(): TransactionWorkspace {
   }
 
   function saveRow(row: TransactionRow) {
-    const validationError = validateTransactionRow(row);
+    const validationError = validateTransactionRow(row, {
+      dateRequired: t(transactionValidationMessageKeys.dateRequired),
+      descriptionRequired: t(transactionValidationMessageKeys.descriptionRequired),
+      amountRequired: t(transactionValidationMessageKeys.amountRequired),
+      amountInvalid: t(transactionValidationMessageKeys.amountInvalid),
+      accountRequired: t(transactionValidationMessageKeys.accountRequired),
+      categoryRequired: t(transactionValidationMessageKeys.categoryRequired),
+    });
 
     if (validationError) {
       setRows((currentRows) =>
@@ -230,7 +240,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
     summary,
     isLoading,
     loadErrorMessage: loadError
-      ? getApiErrorMessage(loadError, 'Could not load transactions.')
+      ? getApiErrorMessage(loadError, t('transactions.loadError'))
       : null,
     hasLookups,
     needsAccount,

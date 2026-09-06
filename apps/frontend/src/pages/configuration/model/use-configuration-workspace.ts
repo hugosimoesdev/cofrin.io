@@ -17,6 +17,7 @@ import {
 } from '@/entities/categories';
 import { transactionQueries } from '@/entities/transactions';
 import { getApiErrorMessage } from '@/shared/api';
+import { useI18n } from '@/shared/lib';
 
 export type AccountForm = {
   name: string;
@@ -92,6 +93,7 @@ function categoryToForm(category: Category): CategoryForm {
 }
 
 export function useConfigurationWorkspace(): ConfigurationWorkspace {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const accountsQuery = useQuery(accountQueries.list());
   const categoriesQuery = useQuery(categoryQueries.list());
@@ -130,7 +132,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: accountQueries.all() });
     },
     onError: (error) => {
-      setAccountFormError(getApiErrorMessage(error, 'Could not save account.'));
+      setAccountFormError(getApiErrorMessage(error, t('configuration.accounts.saveError')));
     },
   });
 
@@ -152,7 +154,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: categoryQueries.all() });
     },
     onError: (error) => {
-      setCategoryFormError(getApiErrorMessage(error, 'Could not save category.'));
+      setCategoryFormError(getApiErrorMessage(error, t('configuration.categories.saveError')));
     },
   });
 
@@ -165,7 +167,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
     },
     onError: (error) => {
-      setAccountDeleteError(getApiErrorMessage(error, 'Could not delete account.'));
+      setAccountDeleteError(getApiErrorMessage(error, t('configuration.accounts.deleteError')));
     },
   });
 
@@ -178,7 +180,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
     },
     onError: (error) => {
-      setCategoryDeleteError(getApiErrorMessage(error, 'Could not delete category.'));
+      setCategoryDeleteError(getApiErrorMessage(error, t('configuration.categories.deleteError')));
     },
   });
 
@@ -194,19 +196,19 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
 
   function submitAccountForm() {
     if (!accountForm.name.trim()) {
-      setAccountFormError('Account name is required.');
+      setAccountFormError(t('configuration.accounts.validation.nameRequired'));
       return;
     }
     if (!accountForm.type.trim()) {
-      setAccountFormError('Account type is required.');
+      setAccountFormError(t('configuration.accounts.validation.typeRequired'));
       return;
     }
     if (!accountForm.initialBalance.trim()) {
-      setAccountFormError('Initial balance is required.');
+      setAccountFormError(t('configuration.accounts.validation.balanceRequired'));
       return;
     }
     if (!Number.isFinite(Number(accountForm.initialBalance))) {
-      setAccountFormError('Initial balance must be a valid number.');
+      setAccountFormError(t('configuration.accounts.validation.balanceInvalid'));
       return;
     }
 
@@ -215,11 +217,11 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
 
   function submitCategoryForm() {
     if (!categoryForm.name.trim()) {
-      setCategoryFormError('Category name is required.');
+      setCategoryFormError(t('configuration.categories.validation.nameRequired'));
       return;
     }
     if (!categoryForm.type.trim()) {
-      setCategoryFormError('Category type is required.');
+      setCategoryFormError(t('configuration.categories.validation.typeRequired'));
       return;
     }
 
@@ -265,7 +267,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
     categories,
     isLoading: accountsQuery.isLoading || categoriesQuery.isLoading,
     loadErrorMessage: loadError
-      ? getApiErrorMessage(loadError, 'Could not load configuration.')
+      ? getApiErrorMessage(loadError, t('configuration.loadError'))
       : null,
     accountForm,
     categoryForm,

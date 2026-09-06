@@ -1,6 +1,7 @@
 import type { Account } from '@/entities/accounts';
 import type { Category } from '@/entities/categories';
 import type { Transaction, TransactionRequest } from '@/entities/transactions';
+import type { TranslationKey } from '@/shared/lib';
 
 export type TransactionRow = {
   clientId: string;
@@ -20,6 +21,34 @@ export type TransactionRowInput = Pick<
   TransactionRow,
   'transactionDate' | 'description' | 'amount' | 'accountId' | 'categoryId' | 'notes'
 >;
+
+export type TransactionValidationMessages = Record<
+  | 'dateRequired'
+  | 'descriptionRequired'
+  | 'amountRequired'
+  | 'amountInvalid'
+  | 'accountRequired'
+  | 'categoryRequired',
+  string
+>;
+
+export const transactionValidationMessageKeys = {
+  dateRequired: 'transactions.validation.dateRequired',
+  descriptionRequired: 'transactions.validation.descriptionRequired',
+  amountRequired: 'transactions.validation.amountRequired',
+  amountInvalid: 'transactions.validation.amountInvalid',
+  accountRequired: 'transactions.validation.accountRequired',
+  categoryRequired: 'transactions.validation.categoryRequired',
+} satisfies Record<keyof TransactionValidationMessages, TranslationKey>;
+
+const defaultTransactionValidationMessages: TransactionValidationMessages = {
+  dateRequired: 'Date is required.',
+  descriptionRequired: 'Description is required.',
+  amountRequired: 'Amount is required.',
+  amountInvalid: 'Amount must be a valid number.',
+  accountRequired: 'Account is required.',
+  categoryRequired: 'Category is required.',
+};
 
 export function formatInputDate(date = new Date()): string {
   const year = date.getFullYear();
@@ -65,32 +94,44 @@ export function transactionToRow(transaction: Transaction): TransactionRow {
   };
 }
 
-export function validateTransactionRow(row: TransactionRowInput): string | null {
+export function validateTransactionRow(
+  row: TransactionRowInput,
+  messages: TransactionValidationMessages = defaultTransactionValidationMessages,
+): string | null {
   if (!row.transactionDate) {
-    return 'Date is required.';
+    return messages.dateRequired;
   }
   if (!row.description.trim()) {
-    return 'Description is required.';
+    return messages.descriptionRequired;
   }
   if (!row.amount.trim()) {
-    return 'Amount is required.';
+    return messages.amountRequired;
   }
-  if (!Number.isFinite(Number(row.amount))) {
-    return 'Amount must be a valid number.';
+  if (!Number.isFinite(parseTransactionAmount(row.amount))) {
+    return messages.amountInvalid;
   }
   if (!row.accountId) {
-    return 'Account is required.';
+    return messages.accountRequired;
   }
   if (!row.categoryId) {
-    return 'Category is required.';
+    return messages.categoryRequired;
   }
 
   return null;
 }
 
+export function parseTransactionAmount(amount: string): number {
+  const trimmedAmount = amount.trim();
+  const normalizedAmount = trimmedAmount.includes(',')
+    ? trimmedAmount.replace(/\./g, '').replace(',', '.')
+    : trimmedAmount;
+
+  return Number(normalizedAmount);
+}
+
 function normalizeAmountForCategory(amount: string, categoryId: string, categories: Category[]): string {
   const category = categories.find((currentCategory) => currentCategory.id === categoryId);
-  const numericAmount = Number(amount);
+  const numericAmount = parseTransactionAmount(amount);
 
   if (!Number.isFinite(numericAmount)) {
     return amount.trim();
@@ -111,7 +152,7 @@ export function getSignedTransactionAmount(
   row: TransactionRowInput,
   categories: Category[],
 ): number | null {
-  const amount = Number(row.amount);
+  const amount = parseTransactionAmount(row.amount);
 
   if (!Number.isFinite(amount)) {
     return null;

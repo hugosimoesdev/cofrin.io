@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Loader2, Plus, Settings } from 'lucide-react';
 
 import { appRoutes } from '@/shared/config';
+import { useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 
 import type { TransactionWorkspace } from '../model/use-transaction-workspace';
@@ -14,6 +15,7 @@ type TransactionWorkspaceViewProps = {
 };
 
 export function TransactionWorkspaceView({ workspace }: TransactionWorkspaceViewProps) {
+  const { t } = useI18n();
   const needsSetup = workspace.needsAccount || workspace.needsCategory;
 
   return (
@@ -22,7 +24,7 @@ export function TransactionWorkspaceView({ workspace }: TransactionWorkspaceView
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-semibold tracking-normal max-[560px]:text-3xl">
-              Transactions
+              {t('transactions.title')}
             </h1>
           </div>
           <Button
@@ -31,38 +33,38 @@ export function TransactionWorkspaceView({ workspace }: TransactionWorkspaceView
             disabled={!workspace.hasLookups || workspace.hasPendingMutation}
           >
             <Plus />
-            Add row
+            {t('transactions.addRow')}
           </Button>
         </header>
 
         <TransactionSummary summary={workspace.summary} />
 
         {needsSetup && !workspace.isLoading && !workspace.loadErrorMessage && (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[#172026]/10 bg-white px-4 py-4 shadow-[0_10px_28px_rgba(23,32,38,0.06)]">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-4 text-card-foreground shadow-sm">
             <div>
-              <h2 className="text-lg font-semibold">Setup required</h2>
-              <p className="mt-1 text-sm text-[#66736f]">
-                Create at least one account and one category before adding transactions.
+              <h2 className="text-lg font-semibold">{t('transactions.setupRequired.title')}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t('transactions.setupRequired.description')}
               </p>
             </div>
             <Button type="button" asChild>
               <Link to={appRoutes.configuration}>
                 <Settings />
-                Open configuration
+                {t('transactions.setupRequired.action')}
               </Link>
             </Button>
           </div>
         )}
 
         {workspace.isLoading && (
-          <div className="flex min-h-44 items-center justify-center rounded-lg border border-[#172026]/10 bg-white text-[#66736f]">
+          <div className="flex min-h-44 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
             <Loader2 className="mr-2 animate-spin" />
-            Loading transactions
+            {t('transactions.loading')}
           </div>
         )}
 
         {workspace.loadErrorMessage && (
-          <div className="rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-destructive">
             {workspace.loadErrorMessage}
           </div>
         )}

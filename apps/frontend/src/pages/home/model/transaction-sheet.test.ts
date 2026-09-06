@@ -4,6 +4,7 @@ import {
   createDraftTransactionRow,
   formatInputDate,
   getSignedTransactionAmount,
+  parseTransactionAmount,
   rowToTransactionRequest,
   transactionToRow,
   validateTransactionRow,
@@ -88,6 +89,35 @@ describe('transaction sheet model', () => {
     ).toBe('Amount must be a valid number.');
   });
 
+  it('parses decimal amounts from English and Brazilian input formats', () => {
+    expect(parseTransactionAmount('69.90')).toBe(69.9);
+    expect(parseTransactionAmount('69,90')).toBe(69.9);
+    expect(parseTransactionAmount('1.234,56')).toBe(1234.56);
+  });
+
+  it('accepts translated validation messages', () => {
+    expect(
+      validateTransactionRow(
+        {
+          transactionDate: '',
+          description: 'Coffee',
+          amount: '10',
+          accountId: 'account-1',
+          categoryId: 'category-1',
+          notes: '',
+        },
+        {
+          dateRequired: 'A data é obrigatória.',
+          descriptionRequired: 'A descrição é obrigatória.',
+          amountRequired: 'O valor é obrigatório.',
+          amountInvalid: 'O valor deve ser um número válido.',
+          accountRequired: 'A conta é obrigatória.',
+          categoryRequired: 'A categoria é obrigatória.',
+        },
+      ),
+    ).toBe('A data é obrigatória.');
+  });
+
   it('normalizes rows into transaction requests', () => {
     expect(
       rowToTransactionRequest(
@@ -109,6 +139,22 @@ describe('transaction sheet model', () => {
       categoryId: 'category-1',
       notes: 'quick stop',
     });
+  });
+
+  it('normalizes Brazilian decimal amounts into transaction requests', () => {
+    expect(
+      rowToTransactionRequest(
+        {
+          transactionDate: '2026-01-06',
+          description: 'Roupa',
+          amount: '69,90',
+          accountId: 'account-1',
+          categoryId: 'category-1',
+          notes: '',
+        },
+        [{ id: 'category-1', name: 'Clothes', type: 'expense' }],
+      ).amount,
+    ).toBe('-69.9');
   });
 
   it('uses category type to sign transaction amounts', () => {

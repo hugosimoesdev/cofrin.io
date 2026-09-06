@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
+import { useI18n } from '@/shared/lib';
 
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
@@ -20,6 +21,7 @@ type DataTableProps<TData, TValue> = {
 };
 
 export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+  const { t } = useI18n();
   const table = useReactTable({
     data,
     columns,
@@ -55,8 +57,11 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                No results.
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
+                {t('dataTable.empty')}
               </TableCell>
             </TableRow>
           )}

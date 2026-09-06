@@ -3,6 +3,7 @@ import { RotateCw } from 'lucide-react';
 
 import { fetchGreeting } from '@/entities/backend-status';
 import { getApiErrorMessage } from '@/shared/api';
+import { useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 
 type ApiState =
@@ -11,6 +12,7 @@ type ApiState =
   | { status: 'error'; message: string };
 
 export function BackendStatus() {
+  const { t } = useI18n();
   const [apiState, setApiState] = useState<ApiState>({ status: 'loading' });
 
   function checkBackend() {
@@ -20,7 +22,7 @@ export function BackendStatus() {
         setApiState({ status: 'ready', message: greeting.message });
       })
       .catch((error: unknown) => {
-        const message = getApiErrorMessage(error, 'Unknown backend error');
+        const message = getApiErrorMessage(error, t('backendStatus.unknownError'));
         setApiState({ status: 'error', message });
       });
   }
@@ -33,14 +35,14 @@ export function BackendStatus() {
 
   return (
     <div
-      className={`api-status api-status--${apiState.status} mb-6 inline-flex min-h-12 items-center gap-3 rounded-lg border border-[#172026]/10 bg-white/70 px-4 py-3 text-[#263238] shadow-[0_18px_42px_rgba(23,32,38,0.1)] max-[560px]:w-full max-[560px]:items-start`}
+      className={`api-status api-status--${apiState.status} mb-6 inline-flex min-h-12 items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-card-foreground shadow-sm max-[560px]:w-full max-[560px]:items-start`}
     >
       <span
         className="status-dot mt-[0.45rem] inline-block size-2.5 shrink-0 rounded-full"
         aria-hidden="true"
       />
       <span className="min-w-0 flex-1">
-        {isLoading && 'Checking backend connection...'}
+        {isLoading && t('backendStatus.checking')}
         {apiState.status === 'ready' && apiState.message}
         {apiState.status === 'error' && apiState.message}
       </span>
@@ -50,10 +52,10 @@ export function BackendStatus() {
         size="sm"
         onClick={checkBackend}
         disabled={isLoading}
-        aria-label="Recheck backend connection"
+        aria-label={t('backendStatus.recheck')}
       >
         <RotateCw className={isLoading ? 'animate-spin' : undefined} />
-        Recheck
+        {t('backendStatus.recheck')}
       </Button>
     </div>
   );

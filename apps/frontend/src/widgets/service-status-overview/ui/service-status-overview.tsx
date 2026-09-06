@@ -1,7 +1,13 @@
+import { useMemo } from 'react';
+
+import { useI18n } from '@/shared/lib';
 import { DataTable } from '@/shared/ui/data-table';
 
-import { serviceStatusColumns, serviceStatusData } from '../model/service-status';
+import { getServiceStatusColumns, serviceStatusData } from '../model/service-status';
 
 export function ServiceStatusOverview() {
-  return <DataTable columns={serviceStatusColumns} data={serviceStatusData} />;
+  const { locale, t } = useI18n();
+  const columns = useMemo(() => getServiceStatusColumns(t), [locale, t]);
+
+  return <DataTable columns={columns} data={serviceStatusData} />;
 }

@@ -1,53 +1,76 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import type { TranslationKey } from '@/shared/lib';
 
 export type ServiceStatus = {
   service: string;
   owner: string;
-  environment: 'Local' | 'Quality' | 'Production';
-  status: 'Online' | 'Pending' | 'Planned';
+  environment: 'local' | 'quality' | 'production';
+  status: 'online' | 'pending' | 'planned';
 };
 
-export const serviceStatusColumns: ColumnDef<ServiceStatus>[] = [
-  {
-    accessorKey: 'service',
-    header: 'Service',
-  },
-  {
-    accessorKey: 'owner',
-    header: 'Owner',
-  },
-  {
-    accessorKey: 'environment',
-    header: 'Environment',
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue<ServiceStatus['status']>('status');
+type Translate = (key: TranslationKey) => string;
 
-      return <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium">{status}</span>;
+const environmentLabelKeys: Record<ServiceStatus['environment'], TranslationKey> = {
+  local: 'serviceStatus.environment.local',
+  quality: 'serviceStatus.environment.quality',
+  production: 'serviceStatus.environment.production',
+};
+
+const statusLabelKeys: Record<ServiceStatus['status'], TranslationKey> = {
+  online: 'serviceStatus.status.online',
+  pending: 'serviceStatus.status.pending',
+  planned: 'serviceStatus.status.planned',
+};
+
+export function getServiceStatusColumns(t: Translate): ColumnDef<ServiceStatus>[] {
+  return [
+    {
+      accessorKey: 'service',
+      header: t('serviceStatus.columns.service'),
     },
-  },
-];
+    {
+      accessorKey: 'owner',
+      header: t('serviceStatus.columns.owner'),
+    },
+    {
+      accessorKey: 'environment',
+      header: t('serviceStatus.columns.environment'),
+      cell: ({ row }) =>
+        t(environmentLabelKeys[row.getValue<ServiceStatus['environment']>('environment')]),
+    },
+    {
+      accessorKey: 'status',
+      header: t('serviceStatus.columns.status'),
+      cell: ({ row }) => {
+        const status = row.getValue<ServiceStatus['status']>('status');
+
+        return (
+          <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium">
+            {t(statusLabelKeys[status])}
+          </span>
+        );
+      },
+    },
+  ];
+}
 
 export const serviceStatusData: ServiceStatus[] = [
   {
     service: 'Quarkus API',
     owner: 'Backend',
-    environment: 'Local',
-    status: 'Online',
+    environment: 'local',
+    status: 'online',
   },
   {
     service: 'PostgreSQL',
     owner: 'Persistence',
-    environment: 'Local',
-    status: 'Online',
+    environment: 'local',
+    status: 'online',
   },
   {
     service: 'Quality deploy',
     owner: 'Platform',
-    environment: 'Quality',
-    status: 'Planned',
+    environment: 'quality',
+    status: 'planned',
   },
 ];
