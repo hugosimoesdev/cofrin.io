@@ -17,7 +17,7 @@ CREATE TABLE transactions (
     description VARCHAR(255) NOT NULL,
     amount NUMERIC(19, 4) NOT NULL,
     account_id UUID NOT NULL,
-    category_id UUID,
+    category_id UUID NOT NULL,
     notes TEXT,
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
