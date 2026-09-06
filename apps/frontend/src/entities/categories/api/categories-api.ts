@@ -50,6 +50,31 @@ export async function createCategory(request: CategoryRequest): Promise<Category
   return readJson<Category>(response);
 }
 
+export async function updateCategory(
+  id: string,
+  request: CategoryRequest,
+): Promise<Category> {
+  const response = await fetch(`/api/categories/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  return readJson<Category>(response);
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  const response = await fetch(`/api/categories/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw await parseApiError(response);
+  }
+}
+
 export const categoryQueries = {
   all: () => ['categories'] as const,
   list: () =>

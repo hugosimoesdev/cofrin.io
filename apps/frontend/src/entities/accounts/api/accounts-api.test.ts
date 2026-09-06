@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createAccount, fetchAccounts, type AccountRequest } from './accounts-api';
+import {
+  createAccount,
+  deleteAccount,
+  fetchAccounts,
+  updateAccount,
+  type AccountRequest,
+} from './accounts-api';
 
 const request: AccountRequest = {
   name: 'Wallet',
@@ -47,6 +53,37 @@ describe('accounts api', () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
+    });
+  });
+
+  it('updates accounts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        id: 'account-1',
+        ...request,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await updateAccount('account-1', request);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/accounts/account-1', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  });
+
+  it('deletes accounts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await deleteAccount('account-1');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/accounts/account-1', {
+      method: 'DELETE',
     });
   });
 

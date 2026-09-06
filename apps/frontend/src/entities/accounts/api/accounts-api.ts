@@ -52,6 +52,28 @@ export async function createAccount(request: AccountRequest): Promise<Account> {
   return readJson<Account>(response);
 }
 
+export async function updateAccount(id: string, request: AccountRequest): Promise<Account> {
+  const response = await fetch(`/api/accounts/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  return readJson<Account>(response);
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  const response = await fetch(`/api/accounts/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw await parseApiError(response);
+  }
+}
+
 export const accountQueries = {
   all: () => ['accounts'] as const,
   list: () =>

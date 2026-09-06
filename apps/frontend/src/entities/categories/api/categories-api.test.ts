@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createCategory, fetchCategories, type CategoryRequest } from './categories-api';
+import {
+  createCategory,
+  deleteCategory,
+  fetchCategories,
+  updateCategory,
+  type CategoryRequest,
+} from './categories-api';
 
 const request: CategoryRequest = {
   name: 'Groceries',
@@ -45,6 +51,37 @@ describe('categories api', () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
+    });
+  });
+
+  it('updates categories', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        id: 'category-1',
+        ...request,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await updateCategory('category-1', request);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/categories/category-1', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  });
+
+  it('deletes categories', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await deleteCategory('category-1');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/categories/category-1', {
+      method: 'DELETE',
     });
   });
 

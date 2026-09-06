@@ -88,11 +88,56 @@ export function validateTransactionRow(row: TransactionRowInput): string | null 
   return null;
 }
 
-export function rowToTransactionRequest(row: TransactionRowInput): TransactionRequest {
+function normalizeAmountForCategory(amount: string, categoryId: string, categories: Category[]): string {
+  const category = categories.find((currentCategory) => currentCategory.id === categoryId);
+  const numericAmount = Number(amount);
+
+  if (!Number.isFinite(numericAmount)) {
+    return amount.trim();
+  }
+
+  if (category?.type === 'expense') {
+    return String(-Math.abs(numericAmount));
+  }
+
+  if (category?.type === 'income') {
+    return String(Math.abs(numericAmount));
+  }
+
+  return amount.trim();
+}
+
+export function getSignedTransactionAmount(
+  row: TransactionRowInput,
+  categories: Category[],
+): number | null {
+  const amount = Number(row.amount);
+
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
+  const category = categories.find((currentCategory) => currentCategory.id === row.categoryId);
+
+  if (category?.type === 'expense') {
+    return -Math.abs(amount);
+  }
+
+  if (category?.type === 'income') {
+    return Math.abs(amount);
+  }
+
+  return amount;
+}
+
+export function rowToTransactionRequest(
+  row: TransactionRowInput,
+  categories: Category[] = [],
+): TransactionRequest {
   return {
     transactionDate: row.transactionDate,
     description: row.description.trim(),
-    amount: row.amount.trim(),
+    amount: normalizeAmountForCategory(row.amount, row.categoryId, categories),
     accountId: row.accountId,
     categoryId: row.categoryId,
     notes: row.notes.trim() || null,

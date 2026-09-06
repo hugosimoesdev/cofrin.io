@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createDraftTransactionRow,
   formatInputDate,
+  getSignedTransactionAmount,
   rowToTransactionRequest,
   transactionToRow,
   validateTransactionRow,
@@ -89,21 +90,59 @@ describe('transaction sheet model', () => {
 
   it('normalizes rows into transaction requests', () => {
     expect(
-      rowToTransactionRequest({
-        transactionDate: '2026-01-06',
-        description: '  Coffee  ',
-        amount: ' -4.50 ',
-        accountId: 'account-1',
-        categoryId: 'category-1',
-        notes: '  quick stop  ',
-      }),
+      rowToTransactionRequest(
+        {
+          transactionDate: '2026-01-06',
+          description: '  Coffee  ',
+          amount: ' -4.50 ',
+          accountId: 'account-1',
+          categoryId: 'category-1',
+          notes: '  quick stop  ',
+        },
+        [{ id: 'category-1', name: 'Groceries', type: 'expense' }],
+      ),
     ).toEqual({
       transactionDate: '2026-01-06',
       description: 'Coffee',
-      amount: '-4.50',
+      amount: '-4.5',
       accountId: 'account-1',
       categoryId: 'category-1',
       notes: 'quick stop',
     });
+  });
+
+  it('uses category type to sign transaction amounts', () => {
+    const categories = [
+      { id: 'category-1', name: 'Clothes', type: 'expense' },
+      { id: 'category-2', name: 'Salary', type: 'income' },
+    ];
+
+    expect(
+      getSignedTransactionAmount(
+        {
+          transactionDate: '2026-01-06',
+          description: 'Shirt',
+          amount: '50',
+          accountId: 'account-1',
+          categoryId: 'category-1',
+          notes: '',
+        },
+        categories,
+      ),
+    ).toBe(-50);
+
+    expect(
+      rowToTransactionRequest(
+        {
+          transactionDate: '2026-01-06',
+          description: 'Salary',
+          amount: '-1000',
+          accountId: 'account-1',
+          categoryId: 'category-2',
+          notes: '',
+        },
+        categories,
+      ).amount,
+    ).toBe('1000');
   });
 });
