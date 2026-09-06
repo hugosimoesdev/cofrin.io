@@ -22,6 +22,8 @@ Follow `.editorconfig`: UTF-8, LF endings, spaces, final newline, and trimmed tr
 
 Use FSD public APIs. Slices in `pages`, `widgets`, and `entities` should expose `index.ts`; outside modules should import from those indexes, not internal `ui`, `api`, or `model` paths. Imports may only point downward through the layers: `app` -> `pages` -> `widgets` -> `features` -> `entities` -> `shared`. Do not put business logic in `shared`.
 
+For non-trivial pages, keep route components thin. Put orchestration, data fetching, mutations, and local workflow state in a page-level `model/use-*.ts` hook. Keep `ui/` components presentational: they should receive plain props/callbacks and should not import API clients, TanStack Query hooks, or mutation logic directly unless intentionally acting as the container. See `docs/adr/0004-use-container-hooks-for-frontend-pages.md`.
+
 ## Testing Guidelines
 
 Frontend tests use Vitest and should live near the code as `*.test.ts` or `*.test.tsx`. Backend tests use JUnit through Quarkus and should be named `*Test.java`. Run `npm run test` before pushing changes. Backend tests may start PostgreSQL through Quarkus Dev Services/Testcontainers, so Docker should be available.
