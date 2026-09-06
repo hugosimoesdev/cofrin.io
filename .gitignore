@@ -9,12 +9,6 @@ apps/frontend/.vite/
 apps/backend/target/
 apps/backend/.mvn/wrapper/maven-wrapper.jar
 
-# Ingestion
-apps/ingestion/.venv/
-apps/ingestion/.pytest_cache/
-apps/ingestion/**/__pycache__/
-apps/ingestion/*.egg-info/
-
 # Logs
 *.log
 npm-debug.log*

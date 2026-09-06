@@ -6,17 +6,14 @@
     "apps/frontend"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend,ingestion -c blue,green,magenta \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:ingestion\"",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd apps/backend && ./mvnw quarkus:dev",
-    "dev:ingestion": "cd apps/ingestion && .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "dev:frontend": "npm run dev --workspace apps/frontend",
     "build": "npm run build --workspace apps/frontend && cd apps/backend && ./mvnw package",
-    "setup": "npm install && npm run setup:infra && npm run setup:backend && npm run setup:ingestion",
+    "setup": "npm install && npm run setup:infra && npm run setup:backend",
     "setup:backend": "cd apps/backend && ./mvnw dependency:go-offline",
     "setup:infra": "docker compose up -d",
-    "setup:ingestion": "cd apps/ingestion && python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install -e '.[dev]'",
-    "test": "npm run test --workspace apps/frontend && cd apps/backend && ./mvnw test",
-    "test:ingestion": "cd apps/ingestion && .venv/bin/python -m pytest"
+    "test": "npm run test --workspace apps/frontend && cd apps/backend && ./mvnw test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
