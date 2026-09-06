@@ -18,6 +18,10 @@ npm-debug.log*
 .idea/
 .vscode/
 
+# Agent local skills
+.agents/
+skills-lock.json
+
 # Environment
 .env
 .env.*
