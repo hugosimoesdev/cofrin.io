@@ -12,7 +12,7 @@ This is a Quarkus + React Vite monorepo. Backend code lives in `apps/backend`, w
 - `npm run dev:frontend`: start the Vite dev server on `http://localhost:5173`.
 - `npm run build`: build the frontend and package the backend.
 - `npm run test`: run Vitest and Maven tests.
-- `docker compose up`: run frontend, backend, and PostgreSQL services locally.
+- `docker compose up`: run local PostgreSQL for development.
 
 ## Coding Style & Naming Conventions
 

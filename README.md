@@ -7,7 +7,7 @@ Quarkus + React Vite monorepo.
 - Backend: Java 21, Quarkus, Maven
 - Frontend: React, TypeScript, Vite
 - Monorepo: npm workspaces
-- Local orchestration: npm scripts or Docker Compose
+- Local development: npm scripts with PostgreSQL from Docker Compose
 
 ## Project Structure
 
@@ -23,6 +23,12 @@ Install frontend dependencies:
 
 ```sh
 npm install
+```
+
+Start local PostgreSQL:
+
+```sh
+docker compose up
 ```
 
 Run both dev servers:
@@ -46,6 +52,8 @@ npm run dev:frontend
 The frontend runs on `http://localhost:5173` and proxies `/api/*` requests to the Quarkus backend on `http://localhost:8080`.
 
 ## Docker Compose
+
+Docker Compose runs only PostgreSQL for local development. The frontend and backend run through npm scripts.
 
 ```sh
 docker compose up
