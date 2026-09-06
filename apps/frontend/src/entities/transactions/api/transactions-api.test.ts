@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@/shared/api';
+
 import {
   createTransaction,
   deleteTransaction,
@@ -19,12 +21,12 @@ const request: TransactionRequest = {
 
 describe('transactions api', () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('fetches transactions', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json([
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: [
         {
           id: 'transaction-1',
           transactionDate: '2026-01-06',
@@ -34,70 +36,49 @@ describe('transactions api', () => {
           categoryId: 'category-1',
           notes: null,
         },
-      ]),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      ],
+    });
 
     await expect(fetchTransactions()).resolves.toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/transactions');
+    expect(getSpy).toHaveBeenCalledWith('/api/transactions');
   });
 
   it('creates transactions', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const postSpy = vi.spyOn(apiClient, 'post').mockResolvedValue({
+      data: {
         id: 'transaction-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await createTransaction(request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/transactions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(postSpy).toHaveBeenCalledWith('/api/transactions', request);
   });
 
   it('updates transactions', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const putSpy = vi.spyOn(apiClient, 'put').mockResolvedValue({
+      data: {
         id: 'transaction-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await updateTransaction('transaction-1', request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/transactions/transaction-1', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(putSpy).toHaveBeenCalledWith('/api/transactions/transaction-1', request);
   });
 
   it('deletes transactions', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const deleteSpy = vi.spyOn(apiClient, 'delete').mockResolvedValue({});
 
     await deleteTransaction('transaction-1');
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/transactions/transaction-1', {
-      method: 'DELETE',
-    });
+    expect(deleteSpy).toHaveBeenCalledWith('/api/transactions/transaction-1');
   });
 
-  it('uses backend error messages when requests fail', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(Response.json({ message: 'description is required.' }, { status: 400 })),
-    );
+  it('rejects when requests fail', async () => {
+    vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('description is required.'));
 
     await expect(createTransaction(request)).rejects.toThrow('description is required.');
   });

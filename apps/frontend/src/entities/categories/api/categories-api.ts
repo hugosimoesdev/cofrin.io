@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { apiClient } from '@/shared/api';
+
 export type Category = {
   id: string;
   name: string;
@@ -11,68 +13,29 @@ export type CategoryRequest = {
   type: string;
 };
 
-type ApiError = {
-  message?: string;
-};
-
-async function parseApiError(response: Response): Promise<Error> {
-  try {
-    const error = (await response.json()) as ApiError;
-    return new Error(error.message ?? `Categories request failed with ${response.status}`);
-  } catch {
-    return new Error(`Categories request failed with ${response.status}`);
-  }
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export async function fetchCategories(): Promise<Category[]> {
-  const response = await fetch('/api/categories');
+  const response = await apiClient.get<Category[]>('/api/categories');
 
-  return readJson<Category[]>(response);
+  return response.data;
 }
 
 export async function createCategory(request: CategoryRequest): Promise<Category> {
-  const response = await fetch('/api/categories', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.post<Category>('/api/categories', request);
 
-  return readJson<Category>(response);
+  return response.data;
 }
 
 export async function updateCategory(
   id: string,
   request: CategoryRequest,
 ): Promise<Category> {
-  const response = await fetch(`/api/categories/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.put<Category>(`/api/categories/${id}`, request);
 
-  return readJson<Category>(response);
+  return response.data;
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const response = await fetch(`/api/categories/${id}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
+  await apiClient.delete(`/api/categories/${id}`);
 }
 
 export const categoryQueries = {

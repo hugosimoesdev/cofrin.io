@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@/shared/api';
+
 import {
   createCategory,
   deleteCategory,
@@ -15,81 +17,60 @@ const request: CategoryRequest = {
 
 describe('categories api', () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('fetches categories', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json([
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: [
         {
           id: 'category-1',
           name: 'Groceries',
           type: 'expense',
         },
-      ]),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      ],
+    });
 
     await expect(fetchCategories()).resolves.toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/categories');
+    expect(getSpy).toHaveBeenCalledWith('/api/categories');
   });
 
   it('creates categories', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const postSpy = vi.spyOn(apiClient, 'post').mockResolvedValue({
+      data: {
         id: 'category-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await createCategory(request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/categories', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(postSpy).toHaveBeenCalledWith('/api/categories', request);
   });
 
   it('updates categories', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const putSpy = vi.spyOn(apiClient, 'put').mockResolvedValue({
+      data: {
         id: 'category-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await updateCategory('category-1', request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/categories/category-1', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(putSpy).toHaveBeenCalledWith('/api/categories/category-1', request);
   });
 
   it('deletes categories', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const deleteSpy = vi.spyOn(apiClient, 'delete').mockResolvedValue({});
 
     await deleteCategory('category-1');
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/categories/category-1', {
-      method: 'DELETE',
-    });
+    expect(deleteSpy).toHaveBeenCalledWith('/api/categories/category-1');
   });
 
-  it('uses backend error messages when requests fail', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(Response.json({ message: 'type is required.' }, { status: 400 })),
-    );
+  it('rejects when requests fail', async () => {
+    vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('type is required.'));
 
     await expect(createCategory(request)).rejects.toThrow('type is required.');
   });

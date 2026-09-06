@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { apiClient } from '@/shared/api';
+
 export type Transaction = {
   id: string;
   transactionDate: string;
@@ -19,68 +21,29 @@ export type TransactionRequest = {
   notes: string | null;
 };
 
-type ApiError = {
-  message?: string;
-};
-
-async function parseApiError(response: Response): Promise<Error> {
-  try {
-    const error = (await response.json()) as ApiError;
-    return new Error(error.message ?? `Transaction request failed with ${response.status}`);
-  } catch {
-    return new Error(`Transaction request failed with ${response.status}`);
-  }
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export async function fetchTransactions(): Promise<Transaction[]> {
-  const response = await fetch('/api/transactions');
+  const response = await apiClient.get<Transaction[]>('/api/transactions');
 
-  return readJson<Transaction[]>(response);
+  return response.data;
 }
 
 export async function createTransaction(request: TransactionRequest): Promise<Transaction> {
-  const response = await fetch('/api/transactions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.post<Transaction>('/api/transactions', request);
 
-  return readJson<Transaction>(response);
+  return response.data;
 }
 
 export async function updateTransaction(
   id: string,
   request: TransactionRequest,
 ): Promise<Transaction> {
-  const response = await fetch(`/api/transactions/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.put<Transaction>(`/api/transactions/${id}`, request);
 
-  return readJson<Transaction>(response);
+  return response.data;
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
-  const response = await fetch(`/api/transactions/${id}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
+  await apiClient.delete(`/api/transactions/${id}`);
 }
 
 export const transactionQueries = {

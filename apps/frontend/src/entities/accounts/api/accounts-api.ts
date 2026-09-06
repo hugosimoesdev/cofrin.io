@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { apiClient } from '@/shared/api';
+
 export type Account = {
   id: string;
   name: string;
@@ -13,65 +15,26 @@ export type AccountRequest = {
   initialBalance: string;
 };
 
-type ApiError = {
-  message?: string;
-};
-
-async function parseApiError(response: Response): Promise<Error> {
-  try {
-    const error = (await response.json()) as ApiError;
-    return new Error(error.message ?? `Accounts request failed with ${response.status}`);
-  } catch {
-    return new Error(`Accounts request failed with ${response.status}`);
-  }
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export async function fetchAccounts(): Promise<Account[]> {
-  const response = await fetch('/api/accounts');
+  const response = await apiClient.get<Account[]>('/api/accounts');
 
-  return readJson<Account[]>(response);
+  return response.data;
 }
 
 export async function createAccount(request: AccountRequest): Promise<Account> {
-  const response = await fetch('/api/accounts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.post<Account>('/api/accounts', request);
 
-  return readJson<Account>(response);
+  return response.data;
 }
 
 export async function updateAccount(id: string, request: AccountRequest): Promise<Account> {
-  const response = await fetch(`/api/accounts/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
+  const response = await apiClient.put<Account>(`/api/accounts/${id}`, request);
 
-  return readJson<Account>(response);
+  return response.data;
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-  const response = await fetch(`/api/accounts/${id}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
+  await apiClient.delete(`/api/accounts/${id}`);
 }
 
 export const accountQueries = {

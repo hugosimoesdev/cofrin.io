@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
 
 import { fetchGreeting } from '@/entities/backend-status';
+import { getApiErrorMessage } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 
 type ApiState =
@@ -19,7 +20,7 @@ export function BackendStatus() {
         setApiState({ status: 'ready', message: greeting.message });
       })
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unknown backend error';
+        const message = getApiErrorMessage(error, 'Unknown backend error');
         setApiState({ status: 'error', message });
       });
   }

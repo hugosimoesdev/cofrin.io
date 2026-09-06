@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@/shared/api';
+
 import {
   createAccount,
   deleteAccount,
@@ -16,82 +18,61 @@ const request: AccountRequest = {
 
 describe('accounts api', () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('fetches accounts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json([
+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: [
         {
           id: 'account-1',
           name: 'Wallet',
           type: 'cash',
           initialBalance: 0,
         },
-      ]),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      ],
+    });
 
     await expect(fetchAccounts()).resolves.toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/accounts');
+    expect(getSpy).toHaveBeenCalledWith('/api/accounts');
   });
 
   it('creates accounts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const postSpy = vi.spyOn(apiClient, 'post').mockResolvedValue({
+      data: {
         id: 'account-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await createAccount(request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/accounts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(postSpy).toHaveBeenCalledWith('/api/accounts', request);
   });
 
   it('updates accounts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const putSpy = vi.spyOn(apiClient, 'put').mockResolvedValue({
+      data: {
         id: 'account-1',
         ...request,
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+      },
+    });
 
     await updateAccount('account-1', request);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/accounts/account-1', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    expect(putSpy).toHaveBeenCalledWith('/api/accounts/account-1', request);
   });
 
   it('deletes accounts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const deleteSpy = vi.spyOn(apiClient, 'delete').mockResolvedValue({});
 
     await deleteAccount('account-1');
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/accounts/account-1', {
-      method: 'DELETE',
-    });
+    expect(deleteSpy).toHaveBeenCalledWith('/api/accounts/account-1');
   });
 
-  it('uses backend error messages when requests fail', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(Response.json({ message: 'name is required.' }, { status: 400 })),
-    );
+  it('rejects when requests fail', async () => {
+    vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('name is required.'));
 
     await expect(createAccount(request)).rejects.toThrow('name is required.');
   });

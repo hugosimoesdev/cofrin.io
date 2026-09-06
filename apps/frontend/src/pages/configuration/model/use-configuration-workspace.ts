@@ -16,6 +16,7 @@ import {
   type Category,
 } from '@/entities/categories';
 import { transactionQueries } from '@/entities/transactions';
+import { getApiErrorMessage } from '@/shared/api';
 
 export type AccountForm = {
   name: string;
@@ -75,10 +76,6 @@ const emptyCategoryForm: CategoryForm = {
   type: 'expense',
 };
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
-
 function accountToForm(account: Account): AccountForm {
   return {
     name: account.name,
@@ -133,7 +130,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: accountQueries.all() });
     },
     onError: (error) => {
-      setAccountFormError(getErrorMessage(error, 'Could not save account.'));
+      setAccountFormError(getApiErrorMessage(error, 'Could not save account.'));
     },
   });
 
@@ -155,7 +152,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: categoryQueries.all() });
     },
     onError: (error) => {
-      setCategoryFormError(getErrorMessage(error, 'Could not save category.'));
+      setCategoryFormError(getApiErrorMessage(error, 'Could not save category.'));
     },
   });
 
@@ -168,7 +165,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
     },
     onError: (error) => {
-      setAccountDeleteError(getErrorMessage(error, 'Could not delete account.'));
+      setAccountDeleteError(getApiErrorMessage(error, 'Could not delete account.'));
     },
   });
 
@@ -181,7 +178,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
       void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
     },
     onError: (error) => {
-      setCategoryDeleteError(getErrorMessage(error, 'Could not delete category.'));
+      setCategoryDeleteError(getApiErrorMessage(error, 'Could not delete category.'));
     },
   });
 
@@ -268,7 +265,7 @@ export function useConfigurationWorkspace(): ConfigurationWorkspace {
     categories,
     isLoading: accountsQuery.isLoading || categoriesQuery.isLoading,
     loadErrorMessage: loadError
-      ? getErrorMessage(loadError, 'Could not load configuration.')
+      ? getApiErrorMessage(loadError, 'Could not load configuration.')
       : null,
     accountForm,
     categoryForm,

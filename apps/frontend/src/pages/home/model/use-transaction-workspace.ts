@@ -9,6 +9,7 @@ import {
   transactionQueries,
   updateTransaction,
 } from '@/entities/transactions';
+import { getApiErrorMessage } from '@/shared/api';
 
 import {
   createDraftTransactionRow,
@@ -48,10 +49,6 @@ export type TransactionWorkspace = {
   saveRow: (row: TransactionRow) => void;
   removeRow: (row: TransactionRow) => void;
 };
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export function useTransactionWorkspace(): TransactionWorkspace {
   const queryClient = useQueryClient();
@@ -128,7 +125,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
           currentRow.clientId === row.clientId
             ? {
                 ...currentRow,
-                error: getErrorMessage(error, 'Could not save transaction.'),
+                error: getApiErrorMessage(error, 'Could not save transaction.'),
               }
             : currentRow,
         ),
@@ -156,7 +153,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
           currentRow.clientId === row.clientId
             ? {
                 ...currentRow,
-                error: getErrorMessage(error, 'Could not delete transaction.'),
+                error: getApiErrorMessage(error, 'Could not delete transaction.'),
               }
             : currentRow,
         ),
@@ -232,7 +229,9 @@ export function useTransactionWorkspace(): TransactionWorkspace {
     categories,
     summary,
     isLoading,
-    loadErrorMessage: loadError ? getErrorMessage(loadError, 'Could not load transactions.') : null,
+    loadErrorMessage: loadError
+      ? getApiErrorMessage(loadError, 'Could not load transactions.')
+      : null,
     hasLookups,
     needsAccount,
     needsCategory,
