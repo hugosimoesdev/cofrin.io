@@ -10,6 +10,7 @@ describe('App scaffold', () => {
   it('defines the primary application routes', () => {
     expect(appRoutes).toEqual({
       home: '/',
+      imports: '/imports',
       configuration: '/configuration',
     });
   });

@@ -1,8 +1,9 @@
 import { Link, Outlet, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { FileUp, Monitor, Moon, Sun } from 'lucide-react';
 
 import { ConfigurationPage } from '@/pages/configuration';
 import { HomePage } from '@/pages/home';
+import { ImportPage } from '@/pages/imports';
 import { appRoutes } from '@/shared/config';
 import { cn, useI18n, useTheme, type Locale, type ThemePreference } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
@@ -52,6 +53,16 @@ function AppLayout() {
                 activeOptions={{ exact: true }}
               >
                 {t('nav.transactions')}
+              </Link>
+              <Link
+                to={appRoutes.imports}
+                className={navLinkClassName}
+                activeProps={{
+                  className: activeNavLinkClassName,
+                }}
+              >
+                <FileUp className="mr-1 inline size-4" />
+                {t('nav.imports')}
               </Link>
               <Link
                 to={appRoutes.configuration}
@@ -125,7 +136,13 @@ const configurationRoute = createRoute({
   component: ConfigurationPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, configurationRoute]);
+const importsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: appRoutes.imports,
+  component: ImportPage,
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, importsRoute, configurationRoute]);
 
 export const router = createRouter({ routeTree });
 
