@@ -28,10 +28,10 @@ export function ImportPreviewWorkspaceView({ workspace }: ImportPreviewWorkspace
         </header>
 
         <ImportUploadPanel
-          selectedFile={workspace.selectedFile}
+          selectedFiles={workspace.selectedFiles}
           canGeneratePreview={workspace.canGeneratePreview}
           isUploading={workspace.isUploading}
-          onFileChange={workspace.selectFile}
+          onFileChange={workspace.selectFiles}
           onGeneratePreview={workspace.generatePreview}
           onClearPreview={workspace.clearPreview}
         />

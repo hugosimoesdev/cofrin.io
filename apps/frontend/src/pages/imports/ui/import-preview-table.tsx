@@ -1,4 +1,3 @@
-import type { PreviewTransaction } from '@/entities/imports';
 import { cn, useI18n, type TranslationKey } from '@/shared/lib';
 import {
   Table,
@@ -9,17 +8,19 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 
+import type { CombinedPreviewTransaction } from '../model/use-import-preview-workspace';
+
 type ImportPreviewTableProps = {
-  transactions: PreviewTransaction[];
+  transactions: CombinedPreviewTransaction[];
 };
 
-const statusClassNames: Record<PreviewTransaction['status'], string> = {
+const statusClassNames: Record<CombinedPreviewTransaction['status'], string> = {
   VALID: 'bg-primary/10 text-primary',
   INVALID: 'bg-destructive/10 text-destructive',
   DUPLICATE: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
 };
 
-const statusLabelKeys: Record<PreviewTransaction['status'], TranslationKey> = {
+const statusLabelKeys: Record<CombinedPreviewTransaction['status'], TranslationKey> = {
   VALID: 'imports.status.valid',
   INVALID: 'imports.status.invalid',
   DUPLICATE: 'imports.status.duplicate',
@@ -33,6 +34,7 @@ export function ImportPreviewTable({ transactions }: ImportPreviewTableProps) {
       <Table>
         <TableHeader className="bg-muted">
           <TableRow>
+            <TableHead className="min-w-36">{t('imports.columns.file')}</TableHead>
             <TableHead className="w-24">{t('imports.columns.row')}</TableHead>
             <TableHead className="min-w-36">{t('imports.columns.date')}</TableHead>
             <TableHead className="min-w-64">{t('imports.columns.description')}</TableHead>
@@ -44,7 +46,7 @@ export function ImportPreviewTable({ transactions }: ImportPreviewTableProps) {
         <TableBody>
           {transactions.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                 {t('imports.preview.empty')}
               </TableCell>
             </TableRow>
@@ -52,9 +54,10 @@ export function ImportPreviewTable({ transactions }: ImportPreviewTableProps) {
 
           {transactions.map((transaction) => (
             <TableRow
-              key={`${transaction.rowNumber}-${transaction.sourceHash ?? transaction.description}`}
+              key={`${transaction.fileName}-${transaction.rowNumber}-${transaction.sourceHash ?? transaction.description}`}
               className={cn(transaction.status === 'DUPLICATE' && 'bg-amber-500/10')}
             >
+              <TableCell className="max-w-52 truncate">{transaction.fileName}</TableCell>
               <TableCell>{transaction.rowNumber}</TableCell>
               <TableCell>{formatPreviewDate(transaction.transactionDate, locale)}</TableCell>
               <TableCell className="max-w-80 whitespace-normal">{transaction.description || '-'}</TableCell>

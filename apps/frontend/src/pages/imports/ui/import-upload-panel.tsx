@@ -5,16 +5,16 @@ import { useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 
 type ImportUploadPanelProps = {
-  selectedFile: File | null;
+  selectedFiles: File[];
   canGeneratePreview: boolean;
   isUploading: boolean;
-  onFileChange: (file: File | null) => void;
+  onFileChange: (files: File[]) => void;
   onGeneratePreview: () => void;
   onClearPreview: () => void;
 };
 
 export function ImportUploadPanel({
-  selectedFile,
+  selectedFiles,
   canGeneratePreview,
   isUploading,
   onFileChange,
@@ -25,7 +25,7 @@ export function ImportUploadPanel({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    onFileChange(event.target.files?.[0] ?? null);
+    onFileChange(Array.from(event.target.files ?? []));
   }
 
   function handleClear() {
@@ -49,6 +49,7 @@ export function ImportUploadPanel({
             <input
               ref={inputRef}
               type="file"
+              multiple
               accept=".csv,text/csv"
               onChange={handleFileChange}
               disabled={isUploading}
@@ -64,7 +65,7 @@ export function ImportUploadPanel({
               {t('imports.upload.chooseFile')}
             </Button>
             <span className="min-w-0 truncate text-sm text-muted-foreground">
-              {selectedFile?.name ?? t('imports.upload.noFile')}
+              {formatSelectedFiles(selectedFiles, t('imports.upload.noFile'))}
             </span>
           </div>
         </div>
@@ -81,10 +82,31 @@ export function ImportUploadPanel({
       </div>
 
       <p className="mt-3 text-sm text-muted-foreground">
-        {selectedFile
-          ? t('imports.upload.selectedFile').replace('{fileName}', selectedFile.name)
+        {selectedFiles.length > 0
+          ? t('imports.upload.selectedFiles').replace('{count}', String(selectedFiles.length))
           : t('imports.upload.noFile')}
       </p>
+      {selectedFiles.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          {selectedFiles.map((file) => (
+            <li key={`${file.name}-${file.size}-${file.lastModified}`} className="rounded-md bg-muted px-2 py-1">
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
+}
+
+function formatSelectedFiles(files: File[], emptyLabel: string) {
+  if (files.length === 0) {
+    return emptyLabel;
+  }
+
+  if (files.length === 1) {
+    return files[0].name;
+  }
+
+  return files.map((file) => file.name).join(', ');
 }
