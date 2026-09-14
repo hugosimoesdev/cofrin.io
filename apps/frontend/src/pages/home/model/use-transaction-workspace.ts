@@ -45,11 +45,30 @@ export type TransactionWorkspace = {
   needsCategory: boolean;
   pendingSaveClientId: string | null;
   pendingDeleteClientId: string | null;
+  pendingBulkDeleteClientIds: string[];
   hasPendingMutation: boolean;
+  selectedClientIds: string[];
+  selectedRowCount: number;
+  isConfirmingBulkDelete: boolean;
+  bulkDeleteErrorMessage: string | null;
   updateRow: (clientId: string, field: EditableTransactionField, value: string) => void;
   addDraftRow: () => void;
   saveRow: (row: TransactionRow) => void;
   removeRow: (row: TransactionRow) => void;
+  toggleRowSelection: (clientId: string, selected: boolean) => void;
+  toggleAllRows: (selected: boolean) => void;
+  requestBulkDelete: () => void;
+  cancelBulkDelete: () => void;
+  confirmBulkDelete: () => void;
+};
+
+type BulkDeleteResult = {
+  deletedClientIds: string[];
+  failedRows: Array<{
+    clientId: string;
+    error: string;
+  }>;
+  deletedPersistedRowCount: number;
 };
 
 export function useTransactionWorkspace(): TransactionWorkspace {
@@ -60,6 +79,9 @@ export function useTransactionWorkspace(): TransactionWorkspace {
   const categoriesQuery = useQuery(categoryQueries.list());
 
   const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [isConfirmingBulkDelete, setIsConfirmingBulkDelete] = useState(false);
+  const [bulkDeleteErrorMessage, setBulkDeleteErrorMessage] = useState<string | null>(null);
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -106,6 +128,14 @@ export function useTransactionWorkspace(): TransactionWorkspace {
     });
   }, [transactionsQuery.data]);
 
+  useEffect(() => {
+    const availableClientIds = new Set(rows.map((row) => row.clientId));
+
+    setSelectedClientIds((currentClientIds) =>
+      currentClientIds.filter((clientId) => availableClientIds.has(clientId)),
+    );
+  }, [rows]);
+
   const saveMutation = useMutation({
     mutationFn: async (row: TransactionRow) => {
       const request = rowToTransactionRequest(row, categories);
@@ -148,6 +178,9 @@ export function useTransactionWorkspace(): TransactionWorkspace {
       setRows((currentRows) =>
         currentRows.filter((currentRow) => currentRow.clientId !== row.clientId),
       );
+      setSelectedClientIds((currentClientIds) =>
+        currentClientIds.filter((clientId) => clientId !== row.clientId),
+      );
       void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
     },
     onError: (error, row) => {
@@ -164,13 +197,79 @@ export function useTransactionWorkspace(): TransactionWorkspace {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (selectedRows: TransactionRow[]): Promise<BulkDeleteResult> => {
+      const draftRows = selectedRows.filter((row) => !row.id);
+      const persistedRows = selectedRows.filter((row) => row.id);
+      const results = await Promise.allSettled(
+        persistedRows.map((row) => deleteTransaction(row.id as string)),
+      );
+      const deletedClientIds = draftRows.map((row) => row.clientId);
+      const failedRows: BulkDeleteResult['failedRows'] = [];
+
+      results.forEach((result, index) => {
+        const row = persistedRows[index];
+
+        if (result.status === 'fulfilled') {
+          deletedClientIds.push(row.clientId);
+          return;
+        }
+
+        failedRows.push({
+          clientId: row.clientId,
+          error: getApiErrorMessage(result.reason, t('transactions.deleteError')),
+        });
+      });
+
+      return {
+        deletedClientIds,
+        failedRows,
+        deletedPersistedRowCount: deletedClientIds.length - draftRows.length,
+      };
+    },
+    onSuccess: ({ deletedClientIds, failedRows, deletedPersistedRowCount }) => {
+      const failedErrorsByClientId = new Map(
+        failedRows.map((failedRow) => [failedRow.clientId, failedRow.error]),
+      );
+
+      setRows((currentRows) =>
+        currentRows
+          .filter((row) => !deletedClientIds.includes(row.clientId))
+          .map((row) =>
+            failedErrorsByClientId.has(row.clientId)
+              ? { ...row, error: failedErrorsByClientId.get(row.clientId) ?? row.error }
+              : row,
+          ),
+      );
+      setSelectedClientIds((currentClientIds) =>
+        currentClientIds.filter((clientId) => !deletedClientIds.includes(clientId)),
+      );
+      setIsConfirmingBulkDelete(false);
+      setBulkDeleteErrorMessage(
+        failedRows.length > 0 ? t('transactions.bulkDeletePartialError') : null,
+      );
+
+      if (deletedPersistedRowCount > 0) {
+        void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
+      }
+    },
+    onError: (error) => {
+      setBulkDeleteErrorMessage(getApiErrorMessage(error, t('transactions.bulkDeleteError')));
+    },
+  });
+
   const pendingSaveClientId = saveMutation.isPending
     ? saveMutation.variables.clientId
     : null;
   const pendingDeleteClientId = deleteMutation.isPending
     ? deleteMutation.variables.clientId
     : null;
-  const hasPendingMutation = saveMutation.isPending || deleteMutation.isPending;
+  const pendingBulkDeleteClientIds = bulkDeleteMutation.isPending
+    ? bulkDeleteMutation.variables.map((row) => row.clientId)
+    : [];
+  const hasPendingMutation =
+    saveMutation.isPending || deleteMutation.isPending || bulkDeleteMutation.isPending;
+  const selectedRowCount = selectedClientIds.length;
 
   function updateRow(clientId: string, field: EditableTransactionField, value: string) {
     setRows((currentRows) =>
@@ -192,6 +291,7 @@ export function useTransactionWorkspace(): TransactionWorkspace {
       return;
     }
 
+    setIsConfirmingBulkDelete(false);
     setRows((currentRows) => [
       createDraftTransactionRow(accounts, categories),
       ...currentRows,
@@ -227,10 +327,58 @@ export function useTransactionWorkspace(): TransactionWorkspace {
       setRows((currentRows) =>
         currentRows.filter((currentRow) => currentRow.clientId !== row.clientId),
       );
+      setSelectedClientIds((currentClientIds) =>
+        currentClientIds.filter((clientId) => clientId !== row.clientId),
+      );
       return;
     }
 
     deleteMutation.mutate(row);
+  }
+
+  function toggleRowSelection(clientId: string, selected: boolean) {
+    setSelectedClientIds((currentClientIds) => {
+      if (selected) {
+        return currentClientIds.includes(clientId)
+          ? currentClientIds
+          : [...currentClientIds, clientId];
+      }
+
+      return currentClientIds.filter((currentClientId) => currentClientId !== clientId);
+    });
+    setIsConfirmingBulkDelete(false);
+    setBulkDeleteErrorMessage(null);
+  }
+
+  function toggleAllRows(selected: boolean) {
+    setSelectedClientIds(selected ? rows.map((row) => row.clientId) : []);
+    setIsConfirmingBulkDelete(false);
+    setBulkDeleteErrorMessage(null);
+  }
+
+  function requestBulkDelete() {
+    if (selectedClientIds.length === 0) {
+      return;
+    }
+
+    setIsConfirmingBulkDelete(true);
+    setBulkDeleteErrorMessage(null);
+  }
+
+  function cancelBulkDelete() {
+    setIsConfirmingBulkDelete(false);
+    setBulkDeleteErrorMessage(null);
+  }
+
+  function confirmBulkDelete() {
+    const selectedRows = rows.filter((row) => selectedClientIds.includes(row.clientId));
+
+    if (selectedRows.length === 0) {
+      setIsConfirmingBulkDelete(false);
+      return;
+    }
+
+    bulkDeleteMutation.mutate(selectedRows);
   }
 
   return {
@@ -247,10 +395,20 @@ export function useTransactionWorkspace(): TransactionWorkspace {
     needsCategory,
     pendingSaveClientId,
     pendingDeleteClientId,
+    pendingBulkDeleteClientIds,
     hasPendingMutation,
+    selectedClientIds,
+    selectedRowCount,
+    isConfirmingBulkDelete,
+    bulkDeleteErrorMessage,
     updateRow,
     addDraftRow,
     saveRow,
     removeRow,
+    toggleRowSelection,
+    toggleAllRows,
+    requestBulkDelete,
+    cancelBulkDelete,
+    confirmBulkDelete,
   };
 }

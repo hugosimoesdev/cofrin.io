@@ -38,7 +38,7 @@ function AppLayout() {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="border-b border-border bg-card/85 backdrop-blur">
-        <nav className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-3 px-6 py-4 max-[720px]:px-4">
+        <nav className="app-container flex flex-wrap items-center justify-between gap-3 py-4">
           <Link to={appRoutes.home} className="text-sm font-bold uppercase text-primary">
             {t('app.brand')}
           </Link>

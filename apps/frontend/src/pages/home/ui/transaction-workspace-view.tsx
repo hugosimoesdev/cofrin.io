@@ -20,7 +20,7 @@ export function TransactionWorkspaceView({ workspace }: TransactionWorkspaceView
 
   return (
     <main>
-      <section className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-6 py-8 max-[720px]:px-4">
+      <section className="app-container flex flex-col gap-6 py-8">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-semibold tracking-normal max-[560px]:text-3xl">
@@ -76,10 +76,20 @@ export function TransactionWorkspaceView({ workspace }: TransactionWorkspaceView
             categories={workspace.categories}
             pendingSaveClientId={workspace.pendingSaveClientId}
             pendingDeleteClientId={workspace.pendingDeleteClientId}
+            pendingBulkDeleteClientIds={workspace.pendingBulkDeleteClientIds}
             hasPendingMutation={workspace.hasPendingMutation}
+            selectedClientIds={workspace.selectedClientIds}
+            selectedRowCount={workspace.selectedRowCount}
+            isConfirmingBulkDelete={workspace.isConfirmingBulkDelete}
+            bulkDeleteErrorMessage={workspace.bulkDeleteErrorMessage}
             onRowChange={workspace.updateRow}
             onSaveRow={workspace.saveRow}
             onRemoveRow={workspace.removeRow}
+            onToggleRowSelection={workspace.toggleRowSelection}
+            onToggleAllRows={workspace.toggleAllRows}
+            onRequestBulkDelete={workspace.requestBulkDelete}
+            onCancelBulkDelete={workspace.cancelBulkDelete}
+            onConfirmBulkDelete={workspace.confirmBulkDelete}
           />
         )}
       </section>

@@ -48,7 +48,7 @@ export function ConfigurationWorkspaceView({ workspace }: ConfigurationWorkspace
 
   return (
     <main>
-      <section className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-6 py-8 max-[720px]:px-4">
+      <section className="app-container flex flex-col gap-6 py-8">
         <header>
           <h1 className="text-4xl font-semibold tracking-normal max-[560px]:text-3xl">
             {t('configuration.title')}

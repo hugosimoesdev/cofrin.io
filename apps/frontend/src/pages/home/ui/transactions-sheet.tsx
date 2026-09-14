@@ -2,7 +2,7 @@ import { Check, Loader2, Trash2, X } from 'lucide-react';
 
 import type { Account } from '@/entities/accounts';
 import type { Category } from '@/entities/categories';
-import { useI18n } from '@/shared/lib';
+import { cn, useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 import {
   Table,
@@ -25,7 +25,12 @@ type TransactionsSheetProps = {
   categories: Category[];
   pendingSaveClientId: string | null;
   pendingDeleteClientId: string | null;
+  pendingBulkDeleteClientIds: string[];
   hasPendingMutation: boolean;
+  selectedClientIds: string[];
+  selectedRowCount: number;
+  isConfirmingBulkDelete: boolean;
+  bulkDeleteErrorMessage: string | null;
   onRowChange: (
     clientId: string,
     field: EditableTransactionField,
@@ -33,6 +38,11 @@ type TransactionsSheetProps = {
   ) => void;
   onSaveRow: TransactionWorkspace['saveRow'];
   onRemoveRow: TransactionWorkspace['removeRow'];
+  onToggleRowSelection: TransactionWorkspace['toggleRowSelection'];
+  onToggleAllRows: TransactionWorkspace['toggleAllRows'];
+  onRequestBulkDelete: TransactionWorkspace['requestBulkDelete'];
+  onCancelBulkDelete: TransactionWorkspace['cancelBulkDelete'];
+  onConfirmBulkDelete: TransactionWorkspace['confirmBulkDelete'];
 };
 
 export function TransactionsSheet({
@@ -41,18 +51,89 @@ export function TransactionsSheet({
   categories,
   pendingSaveClientId,
   pendingDeleteClientId,
+  pendingBulkDeleteClientIds,
   hasPendingMutation,
+  selectedClientIds,
+  selectedRowCount,
+  isConfirmingBulkDelete,
+  bulkDeleteErrorMessage,
   onRowChange,
   onSaveRow,
   onRemoveRow,
+  onToggleRowSelection,
+  onToggleAllRows,
+  onRequestBulkDelete,
+  onCancelBulkDelete,
+  onConfirmBulkDelete,
 }: TransactionsSheetProps) {
   const { t } = useI18n();
+  const selectedClientIdSet = new Set(selectedClientIds);
+  const allRowsSelected = rows.length > 0
+    && rows.every((row) => selectedClientIdSet.has(row.clientId));
+  const isBulkDeleting = pendingBulkDeleteClientIds.length > 0;
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+      {selectedRowCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
+          <div>
+            <p className="text-sm font-medium">
+              {t('transactions.selection.summary').replace('{count}', String(selectedRowCount))}
+            </p>
+            {bulkDeleteErrorMessage && (
+              <p className="mt-1 text-xs text-destructive">{bulkDeleteErrorMessage}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {isConfirmingBulkDelete ? (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onCancelBulkDelete}
+                  disabled={hasPendingMutation}
+                >
+                  <X />
+                  {t('transactions.selection.cancelDelete')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={onConfirmBulkDelete}
+                  disabled={hasPendingMutation}
+                  title={t('transactions.selection.deleteWarning')}
+                >
+                  {isBulkDeleting ? <Loader2 className="animate-spin" /> : <Check />}
+                  {t('transactions.selection.confirmDelete')}
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onRequestBulkDelete}
+                disabled={hasPendingMutation}
+              >
+                <Trash2 />
+                {t('transactions.selection.deleteSelected')}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       <Table>
         <TableHeader className="bg-muted">
           <TableRow>
+            <TableHead className="w-12">
+              <input
+                type="checkbox"
+                checked={allRowsSelected}
+                onChange={(event) => onToggleAllRows(event.target.checked)}
+                disabled={rows.length === 0 || hasPendingMutation}
+                aria-label={t('transactions.selection.toggleAll')}
+                className="size-4 rounded border-input"
+              />
+            </TableHead>
             <TableHead className="min-w-36">{t('transactions.columns.date')}</TableHead>
             <TableHead className="min-w-56">{t('transactions.columns.description')}</TableHead>
             <TableHead className="min-w-36">{t('transactions.columns.amount')}</TableHead>
@@ -65,7 +146,7 @@ export function TransactionsSheet({
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+              <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
                 {t('transactions.empty')}
               </TableCell>
             </TableRow>
@@ -73,10 +154,28 @@ export function TransactionsSheet({
 
           {rows.map((row) => {
             const isSaving = pendingSaveClientId === row.clientId;
-            const isDeleting = pendingDeleteClientId === row.clientId;
+            const isDeleting = pendingDeleteClientId === row.clientId
+              || pendingBulkDeleteClientIds.includes(row.clientId);
+            const isSelected = selectedClientIdSet.has(row.clientId);
 
             return (
-              <TableRow key={row.clientId} className={row.error ? 'bg-destructive/10' : undefined}>
+              <TableRow
+                key={row.clientId}
+                data-state={isSelected ? 'selected' : undefined}
+                className={cn(row.error && 'bg-destructive/10')}
+              >
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(event) =>
+                      onToggleRowSelection(row.clientId, event.target.checked)
+                    }
+                    disabled={hasPendingMutation}
+                    aria-label={t('transactions.selection.toggleRow')}
+                    className="size-4 rounded border-input"
+                  />
+                </TableCell>
                 <TableCell>
                   <input
                     type="date"
