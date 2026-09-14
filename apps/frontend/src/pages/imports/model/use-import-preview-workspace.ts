@@ -1,9 +1,17 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { previewImport, type ImportPreview } from '@/entities/imports';
+import { accountQueries, type Account } from '@/entities/accounts';
+import { categoryQueries, type Category } from '@/entities/categories';
+import {
+  commitImport,
+  previewImport,
+  type ImportCommitItemRequest,
+  type ImportPreview,
+} from '@/entities/imports';
+import { transactionQueries } from '@/entities/transactions';
 import { getApiErrorMessage } from '@/shared/api';
-import { useI18n } from '@/shared/lib';
+import { useI18n, type TranslationKey } from '@/shared/lib';
 
 import type { ImportWarning, PreviewTransaction } from '@/entities/imports';
 
@@ -30,22 +38,100 @@ export type CombinedImportPreview = Omit<ImportPreview, 'transactions' | 'warnin
   warnings: ImportWarning[];
 };
 
+export type ImportEditableField =
+  | 'transactionDate'
+  | 'description'
+  | 'amount'
+  | 'accountId'
+  | 'categoryId'
+  | 'notes';
+
+export type ImportPreviewRow = CombinedPreviewTransaction & {
+  clientId: string;
+  selected: boolean;
+  accountId: string;
+  categoryId: string;
+  notes: string;
+  error: string | null;
+  isEditing: boolean;
+};
+
+export type EditableImportPreview = Omit<CombinedImportPreview, 'transactions'> & {
+  transactions: ImportPreviewRow[];
+};
+
 export type ImportPreviewWorkspace = {
   selectedFiles: File[];
-  preview: CombinedImportPreview | null;
+  preview: EditableImportPreview | null;
+  accounts: Account[];
+  expenseCategories: Category[];
+  incomeCategories: Category[];
+  defaultAccountId: string;
+  defaultExpenseCategoryId: string;
+  defaultIncomeCategoryId: string;
   errorMessage: string | null;
+  successMessage: string | null;
   isUploading: boolean;
+  isSaving: boolean;
+  isLoadingLookups: boolean;
   canGeneratePreview: boolean;
+  canSaveImport: boolean;
+  selectedTransactionCount: number;
   selectFiles: (files: File[]) => void;
   generatePreview: () => void;
   clearPreview: () => void;
+  setDefaultAccountId: (accountId: string) => void;
+  setDefaultExpenseCategoryId: (categoryId: string) => void;
+  setDefaultIncomeCategoryId: (categoryId: string) => void;
+  toggleRowSelection: (clientId: string, selected: boolean) => void;
+  toggleAllRows: (selected: boolean) => void;
+  toggleRowEditing: (clientId: string) => void;
+  updateRow: (clientId: string, field: ImportEditableField, value: string) => void;
+  saveImport: () => void;
 };
 
 export function useImportPreviewWorkspace(): ImportPreviewWorkspace {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const accountsQuery = useQuery(accountQueries.list());
+  const categoriesQuery = useQuery(categoryQueries.list());
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [preview, setPreview] = useState<CombinedImportPreview | null>(null);
+  const [preview, setPreview] = useState<EditableImportPreview | null>(null);
+  const [defaultAccountId, setDefaultAccountIdState] = useState('');
+  const [defaultExpenseCategoryId, setDefaultExpenseCategoryIdState] = useState('');
+  const [defaultIncomeCategoryId, setDefaultIncomeCategoryIdState] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const accounts = accountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const expenseCategories = useMemo(
+    () => categories.filter((category) => category.type === 'expense'),
+    [categories],
+  );
+  const incomeCategories = useMemo(
+    () => categories.filter((category) => category.type === 'income'),
+    [categories],
+  );
+
+  useEffect(() => {
+    if (!defaultAccountId && accounts[0]) {
+      setDefaultAccountIdState(accounts[0].id);
+    }
+  }, [accounts, defaultAccountId]);
+
+  useEffect(() => {
+    if (!defaultExpenseCategoryId && expenseCategories[0]) {
+      setDefaultExpenseCategoryIdState(expenseCategories[0].id);
+    }
+  }, [defaultExpenseCategoryId, expenseCategories]);
+
+  useEffect(() => {
+    if (!defaultIncomeCategoryId && incomeCategories[0]) {
+      setDefaultIncomeCategoryIdState(incomeCategories[0].id);
+    }
+  }, [defaultIncomeCategoryId, incomeCategories]);
 
   const previewMutation = useMutation({
     mutationFn: async (files: File[]) => {
@@ -72,18 +158,67 @@ export function useImportPreviewWorkspace(): ImportPreviewWorkspace {
         return;
       }
 
-      setPreview(combinedPreview);
+      setPreview(toEditablePreview(combinedPreview, {
+        accountId: defaultAccountId,
+        expenseCategoryId: defaultExpenseCategoryId,
+        incomeCategoryId: defaultIncomeCategoryId,
+      }));
       setErrorMessage(null);
+      setSuccessMessage(null);
     },
     onError: (error) => {
       setErrorMessage(getApiErrorMessage(error, t('imports.previewError')));
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: commitImport,
+    onSuccess: (result) => {
+      setSelectedFiles([]);
+      setPreview(null);
+      setErrorMessage(null);
+      setSuccessMessage(
+        t('imports.saveSuccess')
+          .replace('{createdCount}', String(result.createdCount))
+          .replace('{skippedDuplicateCount}', String(result.skippedDuplicateCount)),
+      );
+      void queryClient.invalidateQueries({ queryKey: transactionQueries.all() });
+    },
+    onError: (error) => {
+      setErrorMessage(getApiErrorMessage(error, t('imports.saveError')));
+    },
+  });
+
+  useEffect(() => {
+    setPreview((currentPreview) => {
+      if (!currentPreview) {
+        return currentPreview;
+      }
+
+      return {
+        ...currentPreview,
+        transactions: currentPreview.transactions.map((transaction) => ({
+          ...transaction,
+          accountId: transaction.accountId || defaultAccountId,
+          categoryId: transaction.categoryId || categoryForAmount(
+            transaction.amount,
+            defaultExpenseCategoryId,
+            defaultIncomeCategoryId,
+          ),
+        })),
+      };
+    });
+  }, [defaultAccountId, defaultExpenseCategoryId, defaultIncomeCategoryId]);
+
+  const selectedTransactionCount = preview?.transactions
+    .filter((transaction) => transaction.selected)
+    .length ?? 0;
+
   function selectFiles(files: File[]) {
-    setSelectedFiles(files);
+    setSelectedFiles(files.slice(0, 1));
     setPreview(null);
     setErrorMessage(null);
+    setSuccessMessage(null);
   }
 
   function generatePreview() {
@@ -99,18 +234,123 @@ export function useImportPreviewWorkspace(): ImportPreviewWorkspace {
     setSelectedFiles([]);
     setPreview(null);
     setErrorMessage(null);
+    setSuccessMessage(null);
     previewMutation.reset();
+    saveMutation.reset();
+  }
+
+  function setDefaultAccountId(accountId: string) {
+    setDefaultAccountIdState(accountId);
+    updateRows((row) => ({ ...row, accountId, error: null }));
+  }
+
+  function setDefaultExpenseCategoryId(categoryId: string) {
+    setDefaultExpenseCategoryIdState(categoryId);
+    updateRows((row) => amountSign(row.amount) < 0 ? { ...row, categoryId, error: null } : row);
+  }
+
+  function setDefaultIncomeCategoryId(categoryId: string) {
+    setDefaultIncomeCategoryIdState(categoryId);
+    updateRows((row) => amountSign(row.amount) > 0 ? { ...row, categoryId, error: null } : row);
+  }
+
+  function toggleRowSelection(clientId: string, selected: boolean) {
+    updateRows((row) => row.clientId === clientId ? { ...row, selected, error: null } : row);
+  }
+
+  function toggleAllRows(selected: boolean) {
+    updateRows((row) => isSaveablePreviewRow(row) ? { ...row, selected, error: null } : row);
+  }
+
+  function toggleRowEditing(clientId: string) {
+    updateRows((row) => row.clientId === clientId ? { ...row, isEditing: !row.isEditing } : row);
+  }
+
+  function updateRow(clientId: string, field: ImportEditableField, value: string) {
+    updateRows((row) => row.clientId === clientId
+      ? {
+          ...row,
+          [field]: value,
+          error: null,
+        }
+      : row);
+  }
+
+  function saveImport() {
+    if (!preview) {
+      return;
+    }
+
+    const rowsToSave = preview.transactions.filter((transaction) => transaction.selected);
+
+    if (rowsToSave.length === 0) {
+      setErrorMessage(t('imports.validation.selectionRequired'));
+      return;
+    }
+
+    const rowsWithErrors = rowsToSave.map((row) => ({
+      row,
+      error: validateImportRow(row, expenseCategories, incomeCategories, t),
+    }));
+    const firstError = rowsWithErrors.find((rowWithError) => rowWithError.error);
+
+    if (firstError) {
+      setPreview({
+        ...preview,
+        transactions: preview.transactions.map((transaction) => {
+          const rowWithError = rowsWithErrors.find((current) => current.row.clientId === transaction.clientId);
+
+          return rowWithError?.error
+            ? { ...transaction, error: rowWithError.error }
+            : transaction;
+        }),
+      });
+      setErrorMessage(firstError.error);
+      return;
+    }
+
+    saveMutation.mutate({
+      transactions: rowsToSave.map(toCommitRequest),
+    });
+  }
+
+  function updateRows(update: (row: ImportPreviewRow) => ImportPreviewRow) {
+    setPreview((currentPreview) => currentPreview
+      ? {
+          ...currentPreview,
+          transactions: currentPreview.transactions.map(update),
+        }
+      : currentPreview);
   }
 
   return {
     selectedFiles,
     preview,
+    accounts,
+    expenseCategories,
+    incomeCategories,
+    defaultAccountId,
+    defaultExpenseCategoryId,
+    defaultIncomeCategoryId,
     errorMessage,
+    successMessage,
     isUploading: previewMutation.isPending,
+    isSaving: saveMutation.isPending,
+    isLoadingLookups: accountsQuery.isLoading || categoriesQuery.isLoading,
     canGeneratePreview: selectedFiles.length > 0 && !previewMutation.isPending,
+    canSaveImport: selectedTransactionCount > 0 && !saveMutation.isPending,
+    selectedTransactionCount,
     selectFiles,
     generatePreview,
     clearPreview,
+    setDefaultAccountId,
+    setDefaultExpenseCategoryId,
+    setDefaultIncomeCategoryId,
+    toggleRowSelection,
+    toggleAllRows,
+    toggleRowEditing,
+    updateRow,
+    saveImport,
   };
 }
 
@@ -149,6 +389,9 @@ export function combineImportPreviewResults(results: ImportPreviewResult[]): Com
     fileName: fileCount === 1 ? results[0].fileName : `${fileCount} files`,
     sourceType: successfulResults[0]?.preview.sourceType ?? 'csv',
     institution: successfulResults[0]?.preview.institution ?? 'inter',
+    documentType: successfulResults[0]?.preview.documentType ?? 'BANK_STATEMENT',
+    profile: successfulResults[0]?.preview.profile ?? 'UNKNOWN',
+    confidence: successfulResults[0]?.preview.confidence ?? 'MEDIUM',
     rowCount: transactions.length,
     validCount,
     warningCount: warnings.length,
@@ -198,4 +441,104 @@ function isSuccessfulPreview(result: ImportPreviewResult): result is ImportPrevi
 
 function isFailedPreview(result: ImportPreviewResult): result is ImportPreviewFailure {
   return 'errorMessage' in result;
+}
+
+function toEditablePreview(
+  preview: CombinedImportPreview,
+  defaults: {
+    accountId: string;
+    expenseCategoryId: string;
+    incomeCategoryId: string;
+  },
+): EditableImportPreview {
+  return {
+    ...preview,
+    transactions: preview.transactions.map((transaction) => ({
+      ...transaction,
+      clientId: `${transaction.fileName}-${transaction.rowNumber}-${transaction.sourceHash ?? transaction.description}`,
+      selected: isSaveablePreviewRow(transaction),
+      accountId: defaults.accountId,
+      categoryId: categoryForAmount(
+        transaction.amount,
+        defaults.expenseCategoryId,
+        defaults.incomeCategoryId,
+      ),
+      notes: '',
+      error: null,
+      isEditing: false,
+    })),
+  };
+}
+
+function isSaveablePreviewRow(transaction: Pick<PreviewTransaction, 'status' | 'transactionDate' | 'amount' | 'description' | 'sourceHash'>) {
+  return transaction.status === 'VALID'
+    && Boolean(transaction.transactionDate)
+    && Boolean(transaction.amount)
+    && Boolean(transaction.description.trim())
+    && Boolean(transaction.sourceHash);
+}
+
+function categoryForAmount(
+  amount: string | null,
+  expenseCategoryId: string,
+  incomeCategoryId: string,
+) {
+  return amountSign(amount) < 0 ? expenseCategoryId : incomeCategoryId;
+}
+
+function amountSign(amount: string | null) {
+  const numericAmount = Number(amount);
+
+  if (!Number.isFinite(numericAmount)) {
+    return 0;
+  }
+
+  return Math.sign(numericAmount);
+}
+
+function validateImportRow(
+  row: ImportPreviewRow,
+  expenseCategories: Category[],
+  incomeCategories: Category[],
+  t: (key: TranslationKey) => string,
+) {
+  if (!isSaveablePreviewRow(row)) {
+    return t('imports.validation.rowNotSaveable');
+  }
+  if (!row.accountId) {
+    return t('imports.validation.accountRequired');
+  }
+  if (!row.categoryId) {
+    return t('imports.validation.categoryRequired');
+  }
+
+  const sign = amountSign(row.amount);
+
+  if (sign === 0) {
+    return t('imports.validation.amountNonZero');
+  }
+  if (sign < 0 && !expenseCategories.some((category) => category.id === row.categoryId)) {
+    return t('imports.validation.expenseCategoryRequired');
+  }
+  if (sign > 0 && !incomeCategories.some((category) => category.id === row.categoryId)) {
+    return t('imports.validation.incomeCategoryRequired');
+  }
+
+  return null;
+}
+
+function toCommitRequest(row: ImportPreviewRow): ImportCommitItemRequest {
+  return {
+    transactionDate: row.transactionDate ?? '',
+    description: row.description,
+    amount: row.amount ?? '',
+    accountId: row.accountId,
+    categoryId: row.categoryId,
+    notes: row.notes.trim() || null,
+    sourceType: 'csv',
+    institution: 'inter',
+    sourceFileName: row.fileName,
+    sourceRowNumber: row.rowNumber,
+    sourceHash: row.sourceHash ?? '',
+  };
 }

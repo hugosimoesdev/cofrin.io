@@ -12,6 +12,8 @@ public interface TransactionRepository {
 
     Optional<Transaction> findTransactionById(UUID id);
 
+    boolean existsBySourceHash(String sourceHash);
+
     Transaction create(Transaction transaction);
 
     Transaction update(Transaction transaction);

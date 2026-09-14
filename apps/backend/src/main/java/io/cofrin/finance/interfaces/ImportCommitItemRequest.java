@@ -1,11 +1,10 @@
-package io.cofrin.finance.domain;
+package io.cofrin.finance.interfaces;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record Transaction(
-        UUID id,
+public record ImportCommitItemRequest(
         LocalDate transactionDate,
         String description,
         BigDecimal amount,

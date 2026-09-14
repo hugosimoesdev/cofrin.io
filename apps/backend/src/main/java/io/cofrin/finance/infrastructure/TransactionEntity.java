@@ -39,4 +39,19 @@ public class TransactionEntity extends PanacheEntityBase {
 
     @Column
     public String notes;
+
+    @Column(name = "source_type", length = 30)
+    public String sourceType;
+
+    @Column(length = 100)
+    public String institution;
+
+    @Column(name = "source_file_name", length = 255)
+    public String sourceFileName;
+
+    @Column(name = "source_row_number")
+    public Integer sourceRowNumber;
+
+    @Column(name = "source_hash", length = 64)
+    public String sourceHash;
 }

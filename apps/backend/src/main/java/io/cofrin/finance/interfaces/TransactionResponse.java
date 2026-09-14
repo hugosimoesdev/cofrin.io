@@ -13,7 +13,12 @@ public record TransactionResponse(
         BigDecimal amount,
         UUID accountId,
         UUID categoryId,
-        String notes
+        String notes,
+        String sourceType,
+        String institution,
+        String sourceFileName,
+        Integer sourceRowNumber,
+        String sourceHash
 ) {
 
     public static TransactionResponse fromDomain(Transaction transaction) {
@@ -24,7 +29,12 @@ public record TransactionResponse(
                 transaction.amount(),
                 transaction.accountId(),
                 transaction.categoryId(),
-                transaction.notes()
+                transaction.notes(),
+                transaction.sourceType(),
+                transaction.institution(),
+                transaction.sourceFileName(),
+                transaction.sourceRowNumber(),
+                transaction.sourceHash()
         );
     }
 }

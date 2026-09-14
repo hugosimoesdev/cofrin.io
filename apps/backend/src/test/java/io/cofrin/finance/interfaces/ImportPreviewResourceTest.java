@@ -34,6 +34,8 @@ class ImportPreviewResourceTest {
                 .body("fileName", equalTo("inter.csv"))
                 .body("sourceType", equalTo("csv"))
                 .body("institution", equalTo("inter"))
+                .body("documentType", equalTo("BANK_STATEMENT"))
+                .body("profile", equalTo("INTER_BANK_STATEMENT"))
                 .body("rowCount", equalTo(2))
                 .body("validCount", equalTo(2))
                 .body("warningCount", equalTo(0))
@@ -44,6 +46,34 @@ class ImportPreviewResourceTest {
                 .body("transactions[0].sourceHash", notNullValue())
                 .body("transactions[0].status", equalTo("VALID"))
                 .body("transactions[1].amount", equalTo("-450.00"));
+    }
+
+    @Test
+    void detectsInterCreditCardStatementAndNormalizesPurchasesAsExpenses() throws IOException {
+        File csv = csvFile("""
+                "Data","Lançamento","Categoria","Tipo","Valor"
+                "22/08/2026","Uber UBER  TRIP HELP U SAO PAULO     BRA","TRANSPORTE","Compra à vista","R$ 36,96"
+                "09/08/2026","0748 MARECHAL CARMONA  CAMPINAS      BRA","DROGARIA","Parcela 1/2","R$ 85,20"
+                "31/07/2026","PAGAMENTO ON LINE","OUTROS","Compra à vista","-R$ 3.234,02"
+                """);
+
+        given()
+                .multiPart(upload("fatura-inter-2026-09.csv", csv, "text/csv"))
+                .when().post("/api/imports/preview")
+                .then()
+                .statusCode(200)
+                .body("documentType", equalTo("CREDIT_CARD_STATEMENT"))
+                .body("profile", equalTo("INTER_CREDIT_CARD_STATEMENT"))
+                .body("confidence", equalTo("HIGH"))
+                .body("rowCount", equalTo(3))
+                .body("validCount", equalTo(2))
+                .body("transactions[0].amount", equalTo("-36.96"))
+                .body("transactions[0].status", equalTo("VALID"))
+                .body("transactions[1].amount", equalTo("-85.20"))
+                .body("transactions[1].status", equalTo("VALID"))
+                .body("transactions[2].amount", equalTo("-3234.02"))
+                .body("transactions[2].status", equalTo("INVALID"))
+                .body("warnings.find { it.code == 'credit_card_payment_row' }.rowNumber", equalTo(4));
     }
 
     @Test

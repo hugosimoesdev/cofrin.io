@@ -42,7 +42,12 @@ public class TransactionService {
                 command.amount(),
                 command.accountId(),
                 command.categoryId(),
-                normalizeNotes(command.notes())
+                normalizeNotes(command.notes()),
+                null,
+                null,
+                null,
+                null,
+                null
         ));
     }
 
@@ -60,7 +65,12 @@ public class TransactionService {
                 command.amount(),
                 command.accountId(),
                 command.categoryId(),
-                normalizeNotes(command.notes())
+                normalizeNotes(command.notes()),
+                null,
+                null,
+                null,
+                null,
+                null
         ));
     }
 

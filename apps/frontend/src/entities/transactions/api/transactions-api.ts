@@ -10,6 +10,11 @@ export type Transaction = {
   accountId: string;
   categoryId: string;
   notes: string | null;
+  sourceType?: string | null;
+  institution?: string | null;
+  sourceFileName?: string | null;
+  sourceRowNumber?: number | null;
+  sourceHash?: string | null;
 };
 
 export type TransactionRequest = {

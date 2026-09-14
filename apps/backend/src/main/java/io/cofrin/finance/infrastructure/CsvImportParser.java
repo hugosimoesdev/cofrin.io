@@ -37,6 +37,13 @@ public class CsvImportParser {
 
     private static final String INSTITUTION = "inter";
     private static final String SOURCE_TYPE = "csv";
+    private static final String BANK_STATEMENT = "BANK_STATEMENT";
+    private static final String CREDIT_CARD_STATEMENT = "CREDIT_CARD_STATEMENT";
+    private static final String UNKNOWN_PROFILE = "UNKNOWN";
+    private static final String INTER_BANK_STATEMENT = "INTER_BANK_STATEMENT";
+    private static final String INTER_CREDIT_CARD_STATEMENT = "INTER_CREDIT_CARD_STATEMENT";
+    private static final String HIGH_CONFIDENCE = "HIGH";
+    private static final String MEDIUM_CONFIDENCE = "MEDIUM";
     private static final DateTimeFormatter ISO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter BRAZILIAN_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter SHORT_BRAZILIAN_DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -60,6 +67,8 @@ public class CsvImportParser {
             "valor_da_transacao",
             "valor_do_lancamento"
     );
+    private static final Set<String> STATEMENT_CATEGORY_HEADERS = Set.of("categoria", "category");
+    private static final Set<String> TRANSACTION_TYPE_HEADERS = Set.of("tipo", "type", "tipo_lancamento");
     private static final Set<String> EXTERNAL_ID_HEADERS = Set.of("identificador", "id", "id_externo", "external_id");
 
     public ImportPreview parse(FileUpload file) {
@@ -71,8 +80,10 @@ public class CsvImportParser {
 
         try (CSVParser parser = createParser(tableContent, headerLocation.delimiter())) {
             Map<String, String> headerNames = resolveHeaders(parser.getHeaderMap().keySet());
+            List<CSVRecord> records = parser.getRecords();
             List<ImportWarning> warnings = new ArrayList<>();
             List<PreviewTransaction> transactions = new ArrayList<>();
+            ImportProfile profile = detectProfile(file.fileName(), headerNames, records);
 
             if (!hasRequiredHeaders(headerNames)) {
                 warnings.add(new ImportWarning(
@@ -81,11 +92,23 @@ public class CsvImportParser {
                         "unsupported_headers",
                         "CSV must include date, description, and amount columns."
                 ));
-                return new ImportPreview(file.fileName(), SOURCE_TYPE, INSTITUTION, 0, 0, warnings.size(), List.of(), warnings);
+                return new ImportPreview(
+                        file.fileName(),
+                        SOURCE_TYPE,
+                        INSTITUTION,
+                        profile.documentType(),
+                        profile.profile(),
+                        profile.confidence(),
+                        0,
+                        0,
+                        warnings.size(),
+                        List.of(),
+                        warnings
+                );
             }
 
-            for (CSVRecord record : parser) {
-                parseRecord(record, headerLocation.lineIndex(), headerNames, transactions, warnings);
+            for (CSVRecord record : records) {
+                parseRecord(record, headerLocation.lineIndex(), headerNames, profile, transactions, warnings);
             }
 
             markDuplicateRows(transactions, warnings);
@@ -98,6 +121,9 @@ public class CsvImportParser {
                     file.fileName(),
                     SOURCE_TYPE,
                     INSTITUTION,
+                    profile.documentType(),
+                    profile.profile(),
+                    profile.confidence(),
                     transactions.size(),
                     validCount,
                     warnings.size(),
@@ -113,6 +139,7 @@ public class CsvImportParser {
             CSVRecord record,
             int headerLineIndex,
             Map<String, String> headers,
+            ImportProfile profile,
             List<PreviewTransaction> transactions,
             List<ImportWarning> warnings
     ) {
@@ -129,7 +156,7 @@ public class CsvImportParser {
         String externalId = headers.containsKey("externalId") ? normalizeOptional(value(record, headers.get("externalId"))) : null;
         String normalizedDate = normalizeDate(rawDate);
         String normalizedDescription = normalizeDescription(rawDescription);
-        String normalizedAmount = normalizeMoney(rawAmount);
+        String normalizedAmount = normalizeAmountForProfile(normalizeMoney(rawAmount), normalizedDescription, profile, rowNumber, warnings);
         ImportRowStatus status = ImportRowStatus.VALID;
 
         if (normalizedDate == null) {
@@ -144,9 +171,18 @@ public class CsvImportParser {
             warnings.add(new ImportWarning(rowNumber, "amount", "invalid_amount", "Amount is invalid."));
             status = ImportRowStatus.INVALID;
         }
+        if (isCreditCardPaymentOrCredit(normalizedAmount, normalizedDescription, profile)) {
+            warnings.add(new ImportWarning(
+                    rowNumber,
+                    "amount",
+                    "credit_card_payment_row",
+                    "Credit card payment or credit rows are not imported automatically."
+            ));
+            status = ImportRowStatus.INVALID;
+        }
 
         String sourceHash = status == ImportRowStatus.VALID
-                ? createSourceHash(normalizedDate, normalizedDescription, normalizedAmount, externalId)
+                ? createSourceHash(profile.profile(), normalizedDate, normalizedDescription, normalizedAmount, externalId)
                 : null;
 
         transactions.add(new PreviewTransaction(
@@ -236,6 +272,12 @@ public class CsvImportParser {
             if (isExternalIdHeader(normalizedHeader)) {
                 headers.putIfAbsent("externalId", rawHeader);
             }
+            if (isStatementCategoryHeader(normalizedHeader)) {
+                headers.putIfAbsent("statementCategory", rawHeader);
+            }
+            if (isTransactionTypeHeader(normalizedHeader)) {
+                headers.putIfAbsent("transactionType", rawHeader);
+            }
         }
 
         return headers;
@@ -300,6 +342,14 @@ public class CsvImportParser {
                 || normalizedHeader.contains("external_id");
     }
 
+    private boolean isStatementCategoryHeader(String normalizedHeader) {
+        return STATEMENT_CATEGORY_HEADERS.contains(normalizedHeader);
+    }
+
+    private boolean isTransactionTypeHeader(String normalizedHeader) {
+        return TRANSACTION_TYPE_HEADERS.contains(normalizedHeader);
+    }
+
     private String normalizeDate(String date) {
         String trimmedDate = date == null ? "" : date.trim();
 
@@ -347,6 +397,49 @@ public class CsvImportParser {
         }
     }
 
+    private String normalizeAmountForProfile(
+            String normalizedAmount,
+            String description,
+            ImportProfile profile,
+            int rowNumber,
+            List<ImportWarning> warnings
+    ) {
+        if (normalizedAmount == null || !CREDIT_CARD_STATEMENT.equals(profile.documentType())) {
+            return normalizedAmount;
+        }
+
+        BigDecimal amount = new BigDecimal(normalizedAmount);
+
+        if (amount.signum() > 0) {
+            return amount.negate().toPlainString();
+        }
+
+        return normalizedAmount;
+    }
+
+    private boolean isCreditCardPaymentOrCredit(
+            String normalizedAmount,
+            String description,
+            ImportProfile profile
+    ) {
+        if (normalizedAmount == null || !CREDIT_CARD_STATEMENT.equals(profile.documentType())) {
+            return false;
+        }
+
+        BigDecimal amount = new BigDecimal(normalizedAmount);
+
+        return amount.signum() >= 0 || isCreditCardPaymentDescription(description);
+    }
+
+    private boolean isCreditCardPaymentDescription(String description) {
+        String normalizedDescription = normalizeHeader(description);
+
+        return normalizedDescription.contains("pagamento")
+                || normalizedDescription.contains("pagto")
+                || normalizedDescription.contains("credito")
+                || normalizedDescription.contains("estorno");
+    }
+
     private String normalizeOptional(String value) {
         String normalizedValue = value == null ? "" : value.trim();
 
@@ -387,6 +480,7 @@ public class CsvImportParser {
     }
 
     private String createSourceHash(
+            String profile,
             String transactionDate,
             String description,
             String amount,
@@ -396,6 +490,7 @@ public class CsvImportParser {
         String identity = String.join("|",
                 INSTITUTION,
                 SOURCE_TYPE,
+                profile,
                 transactionDate,
                 normalizedAmount,
                 description.toLowerCase(Locale.ROOT),
@@ -423,6 +518,39 @@ public class CsvImportParser {
         return normalizedValue.replaceAll("\\p{M}", "");
     }
 
+    private ImportProfile detectProfile(
+            String fileName,
+            Map<String, String> headers,
+            List<CSVRecord> records
+    ) {
+        boolean hasCreditCardHeaders = headers.containsKey("statementCategory")
+                && headers.containsKey("transactionType");
+        boolean hasCreditCardTypeValues = records.stream()
+                .map(record -> value(record, headers.get("transactionType")))
+                .map(this::normalizeHeader)
+                .anyMatch(type -> type.contains("compra")
+                        || type.startsWith("parcela")
+                        || type.contains("pagamento"));
+        boolean fileNameLooksLikeInvoice = normalizeHeader(fileName == null ? "" : fileName).contains("fatura");
+
+        if ((hasCreditCardHeaders && hasCreditCardTypeValues) || fileNameLooksLikeInvoice) {
+            return new ImportProfile(
+                    CREDIT_CARD_STATEMENT,
+                    INTER_CREDIT_CARD_STATEMENT,
+                    hasCreditCardHeaders && hasCreditCardTypeValues ? HIGH_CONFIDENCE : MEDIUM_CONFIDENCE
+            );
+        }
+
+        if (headers.containsKey("date") && headers.containsKey("description") && headers.containsKey("amount")) {
+            return new ImportProfile(BANK_STATEMENT, INTER_BANK_STATEMENT, MEDIUM_CONFIDENCE);
+        }
+
+        return new ImportProfile(BANK_STATEMENT, UNKNOWN_PROFILE, MEDIUM_CONFIDENCE);
+    }
+
     private record HeaderLocation(char delimiter, int lineIndex) {
+    }
+
+    private record ImportProfile(String documentType, String profile, String confidence) {
     }
 }

@@ -25,7 +25,7 @@ export function ImportUploadPanel({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    onFileChange(Array.from(event.target.files ?? []));
+    onFileChange(Array.from(event.target.files ?? []).slice(0, 1));
   }
 
   function handleClear() {
@@ -49,7 +49,6 @@ export function ImportUploadPanel({
             <input
               ref={inputRef}
               type="file"
-              multiple
               accept=".csv,text/csv"
               onChange={handleFileChange}
               disabled={isUploading}
@@ -83,7 +82,7 @@ export function ImportUploadPanel({
 
       <p className="mt-3 text-sm text-muted-foreground">
         {selectedFiles.length > 0
-          ? t('imports.upload.selectedFiles').replace('{count}', String(selectedFiles.length))
+          ? t('imports.upload.selectedFile').replace('{fileName}', selectedFiles[0].name)
           : t('imports.upload.noFile')}
       </p>
       {selectedFiles.length > 0 && (

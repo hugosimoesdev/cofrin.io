@@ -27,6 +27,15 @@ public class TransactionPanacheRepository implements PanacheRepositoryBase<Trans
     }
 
     @Override
+    public boolean existsBySourceHash(String sourceHash) {
+        if (sourceHash == null || sourceHash.isBlank()) {
+            return false;
+        }
+
+        return count("sourceHash", sourceHash) > 0;
+    }
+
+    @Override
     @Transactional
     public Transaction create(Transaction transaction) {
         TransactionEntity entity = new TransactionEntity();
@@ -60,6 +69,11 @@ public class TransactionPanacheRepository implements PanacheRepositoryBase<Trans
         entity.account = getEntityManager().getReference(AccountEntity.class, transaction.accountId());
         entity.category = getEntityManager().getReference(CategoryEntity.class, transaction.categoryId());
         entity.notes = transaction.notes();
+        entity.sourceType = transaction.sourceType();
+        entity.institution = transaction.institution();
+        entity.sourceFileName = transaction.sourceFileName();
+        entity.sourceRowNumber = transaction.sourceRowNumber();
+        entity.sourceHash = transaction.sourceHash();
     }
 
     private Transaction toDomain(TransactionEntity entity) {
@@ -70,7 +84,12 @@ public class TransactionPanacheRepository implements PanacheRepositoryBase<Trans
                 entity.amount,
                 entity.account.id,
                 entity.category.id,
-                entity.notes
+                entity.notes,
+                entity.sourceType,
+                entity.institution,
+                entity.sourceFileName,
+                entity.sourceRowNumber,
+                entity.sourceHash
         );
     }
 }
